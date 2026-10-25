@@ -1,8 +1,8 @@
 -- ══════════════════════════════════════════════════════════════
---  MM2 SHORT — PHASE 1B (ESP + Fling + UI)
+--  MM2 SHORT — PHASE 1D (SkidFling integrated)
 --  INSERT = menu · DELETE = panic · END = watermark
 -- ══════════════════════════════════════════════════════════════
-local BUILD = "PHASE-1B"
+local BUILD = "PHASE-1D"
 
 pcall(function() if _G.__MM2Short_Destroy then _G.__MM2Short_Destroy() end end)
 
@@ -16,9 +16,6 @@ local StarterGui       = game:GetService("StarterGui")
 local Camera           = Workspace.CurrentCamera
 local LP               = Players.LocalPlayer
 
--- ══════════════════════════════════════════════════════════════
---  THEME
--- ══════════════════════════════════════════════════════════════
 local T = {
     BG      = Color3.fromRGB(10,10,13),
     Surface = Color3.fromRGB(18,18,22),
@@ -36,9 +33,6 @@ local T = {
     Inno    = Color3.fromRGB(80,160,255),
 }
 
--- ══════════════════════════════════════════════════════════════
---  HELPERS
--- ══════════════════════════════════════════════════════════════
 local function tw(i,p,t,s,d)
     local tween = TweenService:Create(i, TweenInfo.new(t or 0.25, s or Enum.EasingStyle.Quint, d or Enum.EasingDirection.Out), p)
     tween:Play() return tween
@@ -94,9 +88,7 @@ local wmInfo=lbl(wmFrame,"",10,T.Sher,Enum.Font.GothamBold,Enum.TextXAlignment.R
 --  ROLE DETECTION
 -- ══════════════════════════════════════════════════════════════
 local roleMemory = {}
-
 local function clearRoleMemory() roleMemory = {} end
-
 local function checkToolName(tn)
     if not tn then return nil end
     tn = tn:lower()
@@ -104,7 +96,6 @@ local function checkToolName(tn)
     if tn:find("gun") or tn:find("revolver") or tn:find("pistol") then return "sheriff" end
     return nil
 end
-
 local function scanForTools(container)
     if not container then return nil end
     local ok, result = pcall(function()
@@ -118,7 +109,6 @@ local function scanForTools(container)
     end)
     return ok and result or nil
 end
-
 local function getPlayerRole(player)
     if not player then return "innocent" end
     local pname = player.Name
@@ -127,7 +117,6 @@ local function getPlayerRole(player)
     if found then roleMemory[pname] = found; return found end
     return "innocent"
 end
-
 local watchedChars = {}
 local function watchPlayer(p)
     if p == LP then return end
@@ -166,91 +155,161 @@ local function roleText(role, isDead)
 end
 
 -- ══════════════════════════════════════════════════════════════
---  FLING (starý princip: fake part + AlignPosition)
+--  SKIDFLING (working fling for MM2)
+--  Based on zqyDSUWX / KILASIK's SkidFling
 -- ══════════════════════════════════════════════════════════════
-local flingState = {active=false}
+local FlingActive = false
+local FlingOldPos = nil
+local FlingFPDH = Workspace.FallenPartsDestroyHeight
+
+local function SkidFling(TargetPlayer)
+    local Character = LP.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+    local RootPart = Humanoid and Humanoid.RootPart
+    local TCharacter = TargetPlayer.Character
+    if not TCharacter then notify("Fling", "Target has no character"); return end
+
+    local THumanoid = TCharacter:FindFirstChildOfClass("Humanoid")
+    local TRootPart = THumanoid and THumanoid.RootPart
+    local THead = TCharacter:FindFirstChild("Head")
+    local Accessory = TCharacter:FindFirstChildOfClass("Accessory")
+    local Handle = Accessory and Accessory:FindFirstChild("Handle")
+
+    if not (Character and Humanoid and RootPart) then
+        notify("Fling", "Your character is not ready")
+        return
+    end
+
+    if RootPart.Velocity.Magnitude < 50 then
+        FlingOldPos = RootPart.CFrame
+    end
+
+    if THumanoid and THumanoid.Sit then
+        notify("Fling", TargetPlayer.Name .. " is sitting")
+        return
+    end
+
+    if THead then
+        Workspace.CurrentCamera.CameraSubject = THead
+    elseif Handle then
+        Workspace.CurrentCamera.CameraSubject = Handle
+    elseif THumanoid and TRootPart then
+        Workspace.CurrentCamera.CameraSubject = THumanoid
+    end
+
+    if not TCharacter:FindFirstChildWhichIsA("BasePart") then
+        notify("Fling", TargetPlayer.Name .. " has no BasePart")
+        return
+    end
+
+    local FPos = function(BasePart, Pos, Ang)
+        RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
+        Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * Pos * Ang)
+        RootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
+        RootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
+    end
+
+    local SFBasePart = function(BasePart)
+        local TimeToWait = 2
+        local Time = tick()
+        local Angle = 0
+        repeat
+            if RootPart and THumanoid then
+                if BasePart.Velocity.Magnitude < 50 then
+                    Angle = Angle + 100
+                    FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                    task.wait()
+                    FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                    task.wait()
+                    FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                    task.wait()
+                    FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                    task.wait()
+                    FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection, CFrame.Angles(math.rad(Angle), 0, 0))
+                    task.wait()
+                    FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection, CFrame.Angles(math.rad(Angle), 0, 0))
+                    task.wait()
+                else
+                    FPos(BasePart, CFrame.new(0, 1.5, THumanoid.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
+                    task.wait()
+                    FPos(BasePart, CFrame.new(0, -1.5, -THumanoid.WalkSpeed), CFrame.Angles(0, 0, 0))
+                    task.wait()
+                    FPos(BasePart, CFrame.new(0, 1.5, THumanoid.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
+                    task.wait()
+                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(90), 0, 0))
+                    task.wait()
+                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0))
+                    task.wait()
+                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(90), 0, 0))
+                    task.wait()
+                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0))
+                    task.wait()
+                end
+            end
+        until Time + TimeToWait < tick() or not FlingActive
+    end
+
+    Workspace.FallenPartsDestroyHeight = 0/0
+
+    local BV = Instance.new("BodyVelocity")
+    BV.Parent = RootPart
+    BV.Velocity = Vector3.new(0, 0, 0)
+    BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+
+    Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+
+    if TRootPart then
+        SFBasePart(TRootPart)
+    elseif THead then
+        SFBasePart(THead)
+    elseif Handle then
+        SFBasePart(Handle)
+    else
+        notify("Fling", TargetPlayer.Name .. " has no valid parts")
+        return
+    end
+
+    BV:Destroy()
+    Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+    Workspace.CurrentCamera.CameraSubject = Humanoid
+
+    if FlingOldPos then
+        repeat
+            RootPart.CFrame = FlingOldPos * CFrame.new(0, .5, 0)
+            Character:SetPrimaryPartCFrame(FlingOldPos * CFrame.new(0, .5, 0))
+            Humanoid:ChangeState("GettingUp")
+            for _, part in pairs(Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Velocity, part.RotVelocity = Vector3.new(), Vector3.new()
+                end
+            end
+            task.wait()
+        until (RootPart.Position - FlingOldPos.p).Magnitude < 25
+        Workspace.FallenPartsDestroyHeight = FlingFPDH
+    end
+end
 
 local function flingPlayer(targetName)
     local target = Players:FindFirstChild(targetName)
-    if not target or not target.Character then
+    if not target then
         notify("Fling", "Player not found")
         return false
     end
-    local myChar = LP.Character
-    if not myChar then
-        notify("Fling", "Your character not found")
+    if not target.Character then
+        notify("Fling", "Target has no character")
         return false
     end
-    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
-    local myHum = myChar:FindFirstChildOfClass("Humanoid")
-    local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
-    if not myRoot or not myHum or not targetRoot then
-        notify("Fling", "Missing HumanoidRootPart")
-        return false
-    end
-
-    if flingState.active then
+    if FlingActive then
         notify("Fling", "Already flinging")
         return false
     end
-    flingState.active = true
-
+    FlingActive = true
     notify("Fling", "Flinging " .. target.Name .. "...")
-
-    -- Fake part + AlignPosition k targetovi
-    local fakePart = Instance.new("Part")
-    fakePart.Name = "_mm2fling"
-    fakePart.Size = Vector3.new(2, 2, 2)
-    fakePart.Transparency = 1
-    fakePart.CanCollide = false
-    fakePart.Anchored = true
-    fakePart.Parent = Workspace
-
-    local attTarget = Instance.new("Attachment", targetRoot)
-    local attFake = Instance.new("Attachment", fakePart)
-
-    local align = Instance.new("AlignPosition")
-    align.Attachment0 = attFake
-    align.Attachment1 = attTarget
-    align.RigidityEnabled = true
-    align.MaxForce = math.huge
-    align.MaxVelocity = math.huge
-    align.Responsiveness = math.huge
-    align.Parent = fakePart
-
-    fakePart.CFrame = targetRoot.CFrame
-
-    -- Roztočit sebe
-    local oldState = myHum:GetState()
-    pcall(function() myHum:ChangeState(Enum.HumanoidStateType.StrafingNoPhysics) end)
-
-    local spinCount = 0
-    local conn
-    conn = RunService.Heartbeat:Connect(function()
-        if not flingState.active then return end
-        spinCount = spinCount + 1
-        if spinCount > 30 then
-            if conn then conn:Disconnect() end
-            return
-        end
-        pcall(function()
-            myRoot.AssemblyAngularVelocity = Vector3.new(math.random(-500,500), math.random(-500,500), math.random(-500,500))
-            myRoot.AssemblyLinearVelocity = Vector3.new(math.random(-250,250), math.random(-500,500), math.random(-250,250))
-            myRoot.CFrame = fakePart.CFrame
-        end)
-    end)
-
-    task.delay(1.5, function()
-        flingState.active = false
-        if conn then conn:Disconnect() end
-        pcall(function() align:Destroy() end)
-        pcall(function() attTarget:Destroy() end)
-        pcall(function() attFake:Destroy() end)
-        pcall(function() fakePart:Destroy() end)
-        pcall(function() myHum:ChangeState(oldState) end)
+    task.spawn(function()
+        pcall(SkidFling, target)
+        FlingActive = false
         notify("Fling", "Done")
     end)
-
     return true
 end
 
@@ -327,6 +386,18 @@ ContentArea.Parent = Main
 
 local tabs = {}
 local activeTab = nil
+local function switchTab(tab)
+    if activeTab then
+        activeTab.scroll.Visible = false
+        activeTab.btn.TextColor3 = T.Faint
+        activeTab.btn.BackgroundTransparency = 1
+    end
+    activeTab = tab
+    tab.scroll.Visible = true
+    tab.btn.TextColor3 = T.Text
+    tab.btn.BackgroundTransparency = 0.6
+end
+
 local function makeTab(name)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1/3, -2, 1, 0)
@@ -352,12 +423,9 @@ local function makeTab(name)
     local sl = Instance.new("UIListLayout") sl.Padding = UDim.new(0,6) sl.Parent = scroll
     local sp = Instance.new("UIPadding") sp.PaddingLeft = UDim.new(0,10) sp.PaddingRight = UDim.new(0,10) sp.PaddingTop = UDim.new(0,10) sp.PaddingBottom = UDim.new(0,10) sp.Parent = scroll
     local tab = {btn=btn, scroll=scroll}
-    btn.MouseButton1Click:Connect(function()
-        if activeTab then activeTab.scroll.Visible=false tw(activeTab.btn,{TextColor3=T.Faint,BackgroundTransparency=1}) end
-        activeTab=tab scroll.Visible=true tw(btn,{TextColor3=T.Text,BackgroundTransparency=0.6})
-    end)
+    btn.MouseButton1Click:Connect(function() switchTab(tab) end)
     tabs[name]=tab
-    if not activeTab then activeTab=tab scroll.Visible=true btn.TextColor3=T.Text btn.BackgroundTransparency=0.6 end
+    if not activeTab then switchTab(tab) end
     return tab
 end
 
@@ -501,7 +569,7 @@ local espName = makeToggle(secESP, "Name", "Show player name")
 local espRole = makeToggle(secESP, "Role Text", "Show role under name")
 
 -- FUN
-local secFling = makeSection(tFun, "Fling")
+local secFling = makeSection(tFun, "Fling (SkidFling)")
 local flingInput = makeInput(secFling, "Player name...")
 makeButton(secFling, "💥 Fling by Name", T.AccentDrk, function()
     local name = flingInput.Text
@@ -527,15 +595,38 @@ makeButton(secFling, "💥 Fling Sheriff", Color3.fromRGB(100,70,0), function()
     notify("Fling", "No sheriff detected")
 end)
 
+-- TELEPORT
+local secTP = makeSection(tFun, "Teleport (reliable)")
+makeButton(secTP, "📍 To Murderer", Color3.fromRGB(100,20,20), function()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LP and p.Character and getPlayerRole(p) == "murderer" then
+            local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            local t = p.Character:FindFirstChild("HumanoidRootPart")
+            if r and t then r.CFrame = t.CFrame + Vector3.new(0,3,0); notify("TP", "To " .. p.Name); return end
+        end
+    end
+    notify("TP", "No murderer")
+end)
+makeButton(secTP, "📍 To Sheriff", Color3.fromRGB(100,70,0), function()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LP and p.Character and getPlayerRole(p) == "sheriff" then
+            local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            local t = p.Character:FindFirstChild("HumanoidRootPart")
+            if r and t then r.CFrame = t.CFrame + Vector3.new(0,3,0); notify("TP", "To " .. p.Name); return end
+        end
+    end
+    notify("TP", "No sheriff")
+end)
+
 -- ══════════════════════════════════════════════════════════════
---  ESP (Highlight + BillboardGui, běží KAŽDÝ FRAME)
+--  ESP
 -- ══════════════════════════════════════════════════════════════
 local espHighlights = {}
 local espBillboards = {}
 
 local function removeESP(name)
     if espHighlights[name] then pcall(function() espHighlights[name]:Destroy() end) espHighlights[name]=nil end
-    if espBillboards[name] then pcall(function() espBillboards[name]:Destroy() end) espBillboards[name]=nil end
+    if espBillboards[name] then pcall(function() espBillboards[name].bb:Destroy() end) espBillboards[name]=nil end
 end
 
 local function updateESP()
@@ -546,9 +637,7 @@ local function updateESP()
             local isDead = pHum and pHum.Health <= 0
             local show = (role=="murderer" and espMurd:get()) or (role=="sheriff" and espSher:get()) or (role=="innocent" and espInno:get()) or (isDead and espDead:get())
             local color = roleColor(role, isDead)
-
             if show then
-                -- Highlight (box)
                 if espBox:get() then
                     if not espHighlights[p.Name] or not espHighlights[p.Name].Parent then
                         local hl = Instance.new("Highlight")
@@ -567,12 +656,10 @@ local function updateESP()
                 else
                     if espHighlights[p.Name] then pcall(function() espHighlights[p.Name]:Destroy() end) espHighlights[p.Name]=nil end
                 end
-
-                -- Billboard (name + role)
                 if espName:get() or espRole:get() then
                     local head = p.Character:FindFirstChild("Head")
                     if head then
-                        if not espBillboards[p.Name] or not espBillboards[p.Name].Parent then
+                        if not espBillboards[p.Name] or not espBillboards[p.Name].bb.Parent then
                             local bb = Instance.new("BillboardGui")
                             bb.Name = "_mm2bb"
                             bb.Size = UDim2.new(0, 120, 0, 32)
@@ -581,7 +668,6 @@ local function updateESP()
                             bb.Parent = head
                             local txt = Instance.new("TextLabel")
                             txt.Size = UDim2.new(1, 0, 0, 16)
-                            txt.Position = UDim2.new(0, 0, 0, 0)
                             txt.BackgroundTransparency = 1
                             txt.Font = Enum.Font.GothamBold
                             txt.TextSize = 11
@@ -637,6 +723,8 @@ UserInputService.InputBegan:Connect(function(input, gpe)
         Main.Visible = not Main.Visible
     elseif input.KeyCode == Enum.KeyCode.Delete then
         espMurd:set(false) espSher:set(false) espInno:set(false) espDead:set(false) espBox:set(false) espName:set(false) espRole:set(false)
+        FlingActive = false
+        pcall(function() Workspace.FallenPartsDestroyHeight = FlingFPDH end)
         pcall(function() Lighting.Brightness = 1 end)
         notify("Panic", "All features disabled")
     elseif input.KeyCode == Enum.KeyCode.End then
@@ -656,7 +744,6 @@ RunService.Heartbeat:Connect(function(dt)
     fpsAccum = fpsAccum + dt
     heavyTimer = heavyTimer + dt
 
-    -- ESP každý frame (okamžitá reakce)
     pcall(updateESP)
 
     if fpsAccum >= 1 then
@@ -671,7 +758,6 @@ RunService.Heartbeat:Connect(function(dt)
     local char = LP.Character
     if not char then return end
 
-    -- Role labels
     local murderer, sheriff = nil, nil
     local alive, dead = 0, 0
     for _, p in pairs(Players:GetPlayers()) do
@@ -699,6 +785,8 @@ RunService.Heartbeat:Connect(function(dt)
 end)
 
 _G.__MM2Short_Destroy = function()
+    FlingActive = false
+    pcall(function() Workspace.FallenPartsDestroyHeight = FlingFPDH end)
     pcall(function() GUI:Destroy() end)
     pcall(function() WM:Destroy() end)
     for name in pairs(espHighlights) do removeESP(name) end
