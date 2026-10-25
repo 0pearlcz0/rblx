@@ -1,8 +1,8 @@
 -- ══════════════════════════════════════════════════════════════
---  MM2 SHORT — Phase 1 (English, clean base)
+--  MM2 SHORT — PHASE 1B (ESP + Fling + UI)
 --  INSERT = menu · DELETE = panic · END = watermark
 -- ══════════════════════════════════════════════════════════════
-local BUILD = "PHASE-1"
+local BUILD = "PHASE-1B"
 
 pcall(function() if _G.__MM2Short_Destroy then _G.__MM2Short_Destroy() end end)
 
@@ -12,6 +12,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService     = game:GetService("TweenService")
 local Workspace        = game:GetService("Workspace")
 local Lighting         = game:GetService("Lighting")
+local StarterGui       = game:GetService("StarterGui")
 local Camera           = Workspace.CurrentCamera
 local LP               = Players.LocalPlayer
 
@@ -21,7 +22,6 @@ local LP               = Players.LocalPlayer
 local T = {
     BG      = Color3.fromRGB(10,10,13),
     Surface = Color3.fromRGB(18,18,22),
-    SurfaceHi=Color3.fromRGB(26,26,32),
     Accent  = Color3.fromRGB(214,40,56),
     AccentDrk=Color3.fromRGB(140,20,35),
     Text    = Color3.fromRGB(240,240,245),
@@ -72,6 +72,13 @@ local function clearOld(n)
 end
 for _,n in ipairs({"MM2Short","MM2ShortVis","MM2ShortWM"}) do clearOld(n) end
 
+local function notify(title, text)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {Title = title, Text = text, Duration = 3})
+    end)
+    print("[" .. title .. "] " .. text)
+end
+
 -- ══════════════════════════════════════════════════════════════
 --  WATERMARK
 -- ══════════════════════════════════════════════════════════════
@@ -87,22 +94,14 @@ local wmInfo=lbl(wmFrame,"",10,T.Sher,Enum.Font.GothamBold,Enum.TextXAlignment.R
 --  ROLE DETECTION
 -- ══════════════════════════════════════════════════════════════
 local roleMemory = {}
-local roleNotified = {}
 
-local function clearRoleMemory()
-    roleMemory = {}
-    roleNotified = {}
-end
+local function clearRoleMemory() roleMemory = {} end
 
 local function checkToolName(tn)
     if not tn then return nil end
     tn = tn:lower()
-    if tn:find("knife") or tn:find("blade") or tn:find("machete") or tn:find("dagger") then
-        return "murderer"
-    end
-    if tn:find("gun") or tn:find("revolver") or tn:find("pistol") then
-        return "sheriff"
-    end
+    if tn:find("knife") or tn:find("blade") or tn:find("machete") or tn:find("dagger") then return "murderer" end
+    if tn:find("gun") or tn:find("revolver") or tn:find("pistol") then return "sheriff" end
     return nil
 end
 
@@ -141,6 +140,15 @@ local function watchPlayer(p)
             local r = checkToolName(child.Name)
             if r then roleMemory[p.Name] = r end
         end)
+        task.spawn(function()
+            task.wait(0.2)
+            for _, child in pairs(charObj:GetChildren()) do
+                if child:IsA("Tool") then
+                    local r = checkToolName(child.Name)
+                    if r then roleMemory[p.Name] = r break end
+                end
+            end
+        end)
     end
     if p.Character then hookCharacter(p.Character) end
     p.CharacterAdded:Connect(hookCharacter)
@@ -158,27 +166,92 @@ local function roleText(role, isDead)
 end
 
 -- ══════════════════════════════════════════════════════════════
---  FLING (modern, target-based)
+--  FLING (starý princip: fake part + AlignPosition)
 -- ══════════════════════════════════════════════════════════════
+local flingState = {active=false}
+
 local function flingPlayer(targetName)
     local target = Players:FindFirstChild(targetName)
     if not target or not target.Character then
-        return false, "Player not found"
+        notify("Fling", "Player not found")
+        return false
     end
-    local hrp = target.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then
-        return false, "No HumanoidRootPart"
+    local myChar = LP.Character
+    if not myChar then
+        notify("Fling", "Your character not found")
+        return false
     end
-    pcall(function()
-        hrp.AssemblyAngularVelocity = Vector3.new(100000, 100000, 100000)
-        hrp.AssemblyLinearVelocity = Vector3.new(0, 500, 0)
-    end)
-    task.delay(0.5, function()
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    local myHum = myChar:FindFirstChildOfClass("Humanoid")
+    local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
+    if not myRoot or not myHum or not targetRoot then
+        notify("Fling", "Missing HumanoidRootPart")
+        return false
+    end
+
+    if flingState.active then
+        notify("Fling", "Already flinging")
+        return false
+    end
+    flingState.active = true
+
+    notify("Fling", "Flinging " .. target.Name .. "...")
+
+    -- Fake part + AlignPosition k targetovi
+    local fakePart = Instance.new("Part")
+    fakePart.Name = "_mm2fling"
+    fakePart.Size = Vector3.new(2, 2, 2)
+    fakePart.Transparency = 1
+    fakePart.CanCollide = false
+    fakePart.Anchored = true
+    fakePart.Parent = Workspace
+
+    local attTarget = Instance.new("Attachment", targetRoot)
+    local attFake = Instance.new("Attachment", fakePart)
+
+    local align = Instance.new("AlignPosition")
+    align.Attachment0 = attFake
+    align.Attachment1 = attTarget
+    align.RigidityEnabled = true
+    align.MaxForce = math.huge
+    align.MaxVelocity = math.huge
+    align.Responsiveness = math.huge
+    align.Parent = fakePart
+
+    fakePart.CFrame = targetRoot.CFrame
+
+    -- Roztočit sebe
+    local oldState = myHum:GetState()
+    pcall(function() myHum:ChangeState(Enum.HumanoidStateType.StrafingNoPhysics) end)
+
+    local spinCount = 0
+    local conn
+    conn = RunService.Heartbeat:Connect(function()
+        if not flingState.active then return end
+        spinCount = spinCount + 1
+        if spinCount > 30 then
+            if conn then conn:Disconnect() end
+            return
+        end
         pcall(function()
-            hrp.AssemblyAngularVelocity = Vector3.zero
+            myRoot.AssemblyAngularVelocity = Vector3.new(math.random(-500,500), math.random(-500,500), math.random(-500,500))
+            myRoot.AssemblyLinearVelocity = Vector3.new(math.random(-250,250), math.random(-500,500), math.random(-250,250))
+            myRoot.CFrame = fakePart.CFrame
         end)
     end)
-    return true, "Flinged: " .. targetName
+
+    task.delay(1.5, function()
+        flingState.active = false
+        if conn then conn:Disconnect() end
+        pcall(function() align:Destroy() end)
+        pcall(function() attTarget:Destroy() end)
+        pcall(function() attFake:Destroy() end)
+        pcall(function() fakePart:Destroy() end)
+        pcall(function() myHum:ChangeState(oldState) end)
+        notify("Fling", "Done")
+    end)
+
+    return true
 end
 
 -- ══════════════════════════════════════════════════════════════
@@ -188,8 +261,8 @@ local GUI = mount(Instance.new("ScreenGui"))
 GUI.Name = "MM2Short" GUI.ResetOnSpawn = false GUI.DisplayOrder = 999
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 320, 0, 420)
-Main.Position = UDim2.new(0.5, -160, 0.5, -210)
+Main.Size = UDim2.new(0, 320, 0, 440)
+Main.Position = UDim2.new(0.5, -160, 0.5, -220)
 Main.BackgroundColor3 = T.BG
 Main.BorderSizePixel = 0
 Main.Active = true
@@ -197,7 +270,6 @@ Main.Visible = false
 Main.Parent = GUI
 corner(Main, 10) stroke(Main, T.Border, 1)
 
--- Title bar
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 40)
 TitleBar.BackgroundColor3 = T.Surface
@@ -219,7 +291,6 @@ closeBtn.Parent = TitleBar
 corner(closeBtn, 6)
 closeBtn.MouseButton1Click:Connect(function() Main.Visible = false end)
 
--- Drag
 do
     local dragging=false local dragStart=nil local startPos=nil
     TitleBar.InputBegan:Connect(function(input)
@@ -240,7 +311,6 @@ do
     end)
 end
 
--- Tab bar
 local TabBar = Instance.new("Frame")
 TabBar.Size = UDim2.new(1, 0, 0, 36)
 TabBar.Position = UDim2.new(0, 0, 0, 40)
@@ -259,7 +329,7 @@ local tabs = {}
 local activeTab = nil
 local function makeTab(name)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1/4, -2, 1, 0)
+    btn.Size = UDim2.new(1/3, -2, 1, 0)
     btn.BackgroundColor3 = T.Surface
     btn.BackgroundTransparency = 1
     btn.Text = name
@@ -291,7 +361,6 @@ local function makeTab(name)
     return tab
 end
 
--- Controls
 local function makeSection(tab, title)
     local card = Instance.new("Frame")
     card.Size = UDim2.new(1, 0, 0, 0)
@@ -365,7 +434,7 @@ local function makeButton(parent, name, col, cb)
     return btn
 end
 
-local function makeInput(parent, placeholder, cb)
+local function makeInput(parent, placeholder)
     local box = Instance.new("TextBox")
     box.Size = UDim2.new(1,0,0,30)
     box.BackgroundColor3 = T.BG
@@ -381,7 +450,6 @@ local function makeInput(parent, placeholder, cb)
     box.Parent = parent
     corner(box, 6) stroke(box, T.Border, 1, 0.5)
     local pad = Instance.new("UIPadding") pad.PaddingLeft = UDim.new(0,8) pad.Parent = box
-    box.FocusLost:Connect(function() pcall(cb, box.Text) end)
     return box
 end
 
@@ -404,7 +472,7 @@ local tInfo = makeTab("Info")
 local tESP  = makeTab("ESP")
 local tFun  = makeTab("Fun")
 
--- INFO TAB
+-- INFO
 local secRoles = makeSection(tInfo, "Role Info")
 local lblMurd = makeLive(secRoles, "🔪 Murderer", "Detecting...", T.Murd)
 local lblSher = makeLive(secRoles, "🔫 Sheriff", "Detecting...", T.Sher)
@@ -419,23 +487,26 @@ local lblFPS = makeLive(secStats, "FPS", "?")
 local secActions = makeSection(tInfo, "Actions")
 makeButton(secActions, "🧠 Clear Role Memory", Color3.fromRGB(50,30,60), function()
     clearRoleMemory()
+    notify("Memory", "Role memory cleared")
 end)
 
--- ESP TAB
+-- ESP
 local secESP = makeSection(tESP, "ESP Settings")
 local espMurd = makeToggle(secESP, "Murderer ESP", "Red highlight")
 local espSher = makeToggle(secESP, "Sheriff ESP", "Yellow highlight")
 local espInno = makeToggle(secESP, "Innocent ESP", "Blue highlight")
 local espDead = makeToggle(secESP, "Dead ESP", "Show ghosts")
+local espBox = makeToggle(secESP, "Box", "Draw box around players")
+local espName = makeToggle(secESP, "Name", "Show player name")
+local espRole = makeToggle(secESP, "Role Text", "Show role under name")
 
--- FUN TAB
+-- FUN
 local secFling = makeSection(tFun, "Fling")
-local flingInput = makeInput(secFling, "Player name...", function() end)
+local flingInput = makeInput(secFling, "Player name...")
 makeButton(secFling, "💥 Fling by Name", T.AccentDrk, function()
     local name = flingInput.Text
-    if name == "" then return end
-    local ok, msg = flingPlayer(name)
-    print("[MM2Short] " .. (msg or "?"))
+    if name == "" then notify("Fling", "Enter a name"); return end
+    flingPlayer(name)
 end)
 makeButton(secFling, "💥 Fling Murderer", Color3.fromRGB(100,20,20), function()
     for _, p in pairs(Players:GetPlayers()) do
@@ -444,6 +515,7 @@ makeButton(secFling, "💥 Fling Murderer", Color3.fromRGB(100,20,20), function(
             return
         end
     end
+    notify("Fling", "No murderer detected")
 end)
 makeButton(secFling, "💥 Fling Sheriff", Color3.fromRGB(100,70,0), function()
     for _, p in pairs(Players:GetPlayers()) do
@@ -452,14 +524,19 @@ makeButton(secFling, "💥 Fling Sheriff", Color3.fromRGB(100,70,0), function()
             return
         end
     end
+    notify("Fling", "No sheriff detected")
 end)
 
 -- ══════════════════════════════════════════════════════════════
---  ESP VISUALS
+--  ESP (Highlight + BillboardGui, běží KAŽDÝ FRAME)
 -- ══════════════════════════════════════════════════════════════
-local VisGui = mount(Instance.new("ScreenGui"))
-VisGui.Name = "MM2ShortVis" VisGui.ResetOnSpawn = false VisGui.DisplayOrder = 995
-local espObjects = {}
+local espHighlights = {}
+local espBillboards = {}
+
+local function removeESP(name)
+    if espHighlights[name] then pcall(function() espHighlights[name]:Destroy() end) espHighlights[name]=nil end
+    if espBillboards[name] then pcall(function() espBillboards[name]:Destroy() end) espBillboards[name]=nil end
+end
 
 local function updateESP()
     for _, p in pairs(Players:GetPlayers()) do
@@ -469,46 +546,86 @@ local function updateESP()
             local isDead = pHum and pHum.Health <= 0
             local show = (role=="murderer" and espMurd:get()) or (role=="sheriff" and espSher:get()) or (role=="innocent" and espInno:get()) or (isDead and espDead:get())
             local color = roleColor(role, isDead)
-            local head = p.Character:FindFirstChild("Head")
-            if show and head then
-                if not espObjects[p.Name] then
-                    local bb = Instance.new("BillboardGui")
-                    bb.Name = "MM2ESP"
-                    bb.Size = UDim2.new(0, 120, 0, 36)
-                    bb.StudsOffset = Vector3.new(0, 2, 0)
-                    bb.AlwaysOnTop = true
-                    bb.Parent = head
-                    local bg = Instance.new("Frame") bg.Size = UDim2.new(1,0,1,0) bg.BackgroundColor3 = Color3.fromRGB(10,10,13) bg.BackgroundTransparency = 0.3 bg.BorderSizePixel = 0 bg.Parent = bb corner(bg, 4) stroke(bg, color, 1, 0.3)
-                    local txt = Instance.new("TextLabel") txt.Size = UDim2.new(1,-6,0,16) txt.Position = UDim2.new(0,3,0,2) txt.BackgroundTransparency = 1 txt.TextColor3 = color txt.Font = Enum.Font.GothamBold txt.TextSize = 11 txt.TextXAlignment = Enum.TextXAlignment.Left txt.Parent = bg
-                    local rtxt = Instance.new("TextLabel") rtxt.Size = UDim2.new(1,-6,0,14) rtxt.Position = UDim2.new(0,3,0,18) rtxt.BackgroundTransparency = 1 rtxt.TextColor3 = color rtxt.Font = Enum.Font.GothamMedium rtxt.TextSize = 10 rtxt.TextXAlignment = Enum.TextXAlignment.Left rtxt.Parent = bg
-                    espObjects[p.Name] = {bb=bb, txt=txt, rtxt=rtxt, bg=bg}
+
+            if show then
+                -- Highlight (box)
+                if espBox:get() then
+                    if not espHighlights[p.Name] or not espHighlights[p.Name].Parent then
+                        local hl = Instance.new("Highlight")
+                        hl.Name = "_mm2hl"
+                        hl.FillColor = color
+                        hl.FillTransparency = 0.6
+                        hl.OutlineColor = color
+                        hl.OutlineTransparency = 0
+                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        hl.Parent = p.Character
+                        espHighlights[p.Name] = hl
+                    else
+                        espHighlights[p.Name].FillColor = color
+                        espHighlights[p.Name].OutlineColor = color
+                    end
+                else
+                    if espHighlights[p.Name] then pcall(function() espHighlights[p.Name]:Destroy() end) espHighlights[p.Name]=nil end
                 end
-                local data = espObjects[p.Name]
-                data.txt.Text = p.Name
-                data.rtxt.Text = roleText(role, isDead)
-                data.txt.TextColor3 = color
-                data.rtxt.TextColor3 = color
-                local s = data.bg:FindFirstChildOfClass("UIStroke") if s then s.Color = color end
+
+                -- Billboard (name + role)
+                if espName:get() or espRole:get() then
+                    local head = p.Character:FindFirstChild("Head")
+                    if head then
+                        if not espBillboards[p.Name] or not espBillboards[p.Name].Parent then
+                            local bb = Instance.new("BillboardGui")
+                            bb.Name = "_mm2bb"
+                            bb.Size = UDim2.new(0, 120, 0, 32)
+                            bb.StudsOffset = Vector3.new(0, 2, 0)
+                            bb.AlwaysOnTop = true
+                            bb.Parent = head
+                            local txt = Instance.new("TextLabel")
+                            txt.Size = UDim2.new(1, 0, 0, 16)
+                            txt.Position = UDim2.new(0, 0, 0, 0)
+                            txt.BackgroundTransparency = 1
+                            txt.Font = Enum.Font.GothamBold
+                            txt.TextSize = 11
+                            txt.TextStrokeTransparency = 0
+                            txt.TextXAlignment = Enum.TextXAlignment.Center
+                            txt.Parent = bb
+                            local rtxt = Instance.new("TextLabel")
+                            rtxt.Size = UDim2.new(1, 0, 0, 14)
+                            rtxt.Position = UDim2.new(0, 0, 0, 16)
+                            rtxt.BackgroundTransparency = 1
+                            rtxt.Font = Enum.Font.GothamMedium
+                            rtxt.TextSize = 10
+                            rtxt.TextStrokeTransparency = 0
+                            rtxt.TextXAlignment = Enum.TextXAlignment.Center
+                            rtxt.Parent = bb
+                            espBillboards[p.Name] = {bb=bb, txt=txt, rtxt=rtxt}
+                        end
+                        local data = espBillboards[p.Name]
+                        data.txt.Text = espName:get() and p.Name or ""
+                        data.txt.TextColor3 = color
+                        data.rtxt.Text = espRole:get() and roleText(role, isDead) or ""
+                        data.rtxt.TextColor3 = color
+                    end
+                else
+                    if espBillboards[p.Name] then pcall(function() espBillboards[p.Name].bb:Destroy() end) espBillboards[p.Name]=nil end
+                end
             else
-                if espObjects[p.Name] then
-                    pcall(function() espObjects[p.Name].bb:Destroy() end)
-                    espObjects[p.Name] = nil
-                end
+                removeESP(p.Name)
             end
         end
     end
 end
 
 -- ══════════════════════════════════════════════════════════════
---  CLEANUP ON LEAVE
+--  CLEANUP
 -- ══════════════════════════════════════════════════════════════
 Players.PlayerRemoving:Connect(function(p)
-    if espObjects[p.Name] then pcall(function() espObjects[p.Name].bb:Destroy() end) espObjects[p.Name]=nil end
+    removeESP(p.Name)
     if roleMemory[p.Name] then roleMemory[p.Name]=nil end
 end)
 LP.CharacterAdded:Connect(function()
     task.wait(1)
     clearRoleMemory()
+    for name in pairs(espHighlights) do removeESP(name) end
 end)
 
 -- ══════════════════════════════════════════════════════════════
@@ -519,8 +636,9 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     if input.KeyCode == Enum.KeyCode.Insert then
         Main.Visible = not Main.Visible
     elseif input.KeyCode == Enum.KeyCode.Delete then
-        espMurd:set(false) espSher:set(false) espInno:set(false) espDead:set(false)
+        espMurd:set(false) espSher:set(false) espInno:set(false) espDead:set(false) espBox:set(false) espName:set(false) espRole:set(false)
         pcall(function() Lighting.Brightness = 1 end)
+        notify("Panic", "All features disabled")
     elseif input.KeyCode == Enum.KeyCode.End then
         wmFrame.Visible = not wmFrame.Visible
     end
@@ -538,6 +656,9 @@ RunService.Heartbeat:Connect(function(dt)
     fpsAccum = fpsAccum + dt
     heavyTimer = heavyTimer + dt
 
+    -- ESP každý frame (okamžitá reakce)
+    pcall(updateESP)
+
     if fpsAccum >= 1 then
         local fps = math.floor(fpsCount / fpsAccum)
         pcall(function() lblFPS.set(fps .. " FPS") wmInfo.Text = fps .. " FPS" end)
@@ -549,8 +670,6 @@ RunService.Heartbeat:Connect(function(dt)
 
     local char = LP.Character
     if not char then return end
-
-    pcall(updateESP)
 
     -- Role labels
     local murderer, sheriff = nil, nil
@@ -581,9 +700,8 @@ end)
 
 _G.__MM2Short_Destroy = function()
     pcall(function() GUI:Destroy() end)
-    pcall(function() VisGui:Destroy() end)
     pcall(function() WM:Destroy() end)
-    for _, data in pairs(espObjects) do pcall(function() data.bb:Destroy() end) end
+    for name in pairs(espHighlights) do removeESP(name) end
 end
 
 print("[MM2 Short] " .. BUILD .. " loaded")
