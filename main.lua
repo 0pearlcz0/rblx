@@ -1,8 +1,8 @@
 -- ══════════════════════════════════════════════════════════════
---  MM2 SHORT — PHASE 1G (mobile/touch support)
+--  MM2 SHORT — PHASE 1H (mobile fix: Active + ZIndex)
 --  INSERT = menu · DELETE = panic · END = watermark
 -- ══════════════════════════════════════════════════════════════
-local BUILD = "PHASE-1G"
+local BUILD = "PHASE-1H"
 
 pcall(function() if _G.__MM2Short_Destroy then _G.__MM2Short_Destroy() end end)
 
@@ -329,6 +329,7 @@ closeBtn.TextColor3 = T.Text
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextSize = 13
 closeBtn.BorderSizePixel = 0
+closeBtn.Active = true
 closeBtn.Parent = TitleBar
 corner(closeBtn, 6)
 closeBtn.Activated:Connect(function() Main.Visible = false end)
@@ -405,6 +406,7 @@ local function makeTab(name)
     btn.TextSize = 11
     btn.BorderSizePixel = 0
     btn.AutoButtonColor = false
+    btn.Active = true
     btn.LayoutOrder = tabOrder
     btn.Parent = TabBar
     corner(btn, 4)
@@ -478,6 +480,8 @@ local function makeToggle(parent, name, desc, callback)
     btn.Size = UDim2.new(1,0,1,0)
     btn.BackgroundTransparency = 1
     btn.Text = ""
+    btn.Active = true
+    btn.ZIndex = 10
     btn.Parent = row
     btn.Activated:Connect(function() h:set(not on) end)
     return h
@@ -493,6 +497,7 @@ local function makeButton(parent, name, col, cb)
     btn.TextSize = 12
     btn.BorderSizePixel = 0
     btn.AutoButtonColor = false
+    btn.Active = true
     btn.Parent = parent
     corner(btn, 6) stroke(btn, col or T.Accent, 1, 0.5)
     btn.MouseEnter:Connect(function() tw(btn,{BackgroundColor3=T.Accent}) end)
@@ -547,6 +552,8 @@ local function makeSlider(parent, name, min, max, default, suffix, cb)
     hit.Position = UDim2.new(0,0,0,22)
     hit.BackgroundTransparency = 1
     hit.Text = ""
+    hit.Active = true
+    hit.ZIndex = 10
     hit.Parent = row
     hit.InputBegan:Connect(function(i)
         if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
@@ -677,6 +684,7 @@ local function refreshPlayerPicker()
             row.TextSize = 11
             row.TextXAlignment = Enum.TextXAlignment.Left
             row.AutoButtonColor = false
+            row.Active = true
             row.Parent = pickerScroll
             corner(row, 4)
             row.Activated:Connect(function()
