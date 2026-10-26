@@ -1,10 +1,10 @@
 -- ══════════════════════════════════════════════════════════════
---  MM2 SHORT — PHASE 1I
+--  MM2 SHORT — PHASE 1J
 --  INSERT = menu · DELETE = panic · END = watermark · E = aim
---  Nové: X-Ray, Kill Murderer/All (B), Gun Grabber, Anti-Lag,
---        Aim Player, Fly | Fix: GunDrop ESP, barvy rolí (Hero)
+--  Nové: Noclip, Infinite Jump, X-Ray Parts, Teleport sekce,
+--        Coin Farm, Anti-AFK
 -- ══════════════════════════════════════════════════════════════
-local BUILD = "PHASE-1I"
+local BUILD = "PHASE-1J"
 
 pcall(function() if _G.__MM2Short_Destroy then _G.__MM2Short_Destroy() end end)
 
@@ -15,6 +15,7 @@ local TweenService     = game:GetService("TweenService")
 local Workspace        = game:GetService("Workspace")
 local Lighting         = game:GetService("Lighting")
 local StarterGui       = game:GetService("StarterGui")
+local VirtualUser      = game:GetService("VirtualUser")
 local Camera           = Workspace.CurrentCamera
 local LP               = Players.LocalPlayer
 
@@ -31,9 +32,9 @@ local T = {
     Bad     = Color3.fromRGB(226,72,72),
     Border  = Color3.fromRGB(35,35,42),
     Murd    = Color3.fromRGB(255,60,60),
-    Sher    = Color3.fromRGB(80,160,255),   -- MODRÁ
-    Inno    = Color3.fromRGB(72,199,116),   -- ZELENÁ
-    Hero    = Color3.fromRGB(255,200,50),   -- ŽLUTÁ
+    Sher    = Color3.fromRGB(80,160,255),
+    Inno    = Color3.fromRGB(72,199,116),
+    Hero    = Color3.fromRGB(255,200,50),
     Gun     = Color3.fromRGB(0,120,255),
     Knife   = Color3.fromRGB(255,30,30),
     None    = Color3.fromRGB(0,220,80),
@@ -86,7 +87,7 @@ WM.Name="MM2ShortWM" WM.ResetOnSpawn=false WM.DisplayOrder=996
 local wmFrame=Instance.new("Frame") wmFrame.Size=UDim2.new(0,220,0,30) wmFrame.Position=UDim2.new(0,10,0,10)
 wmFrame.BackgroundColor3=T.Surface wmFrame.BackgroundTransparency=0.1 wmFrame.BorderSizePixel=0 wmFrame.Parent=WM
 corner(wmFrame,6) stroke(wmFrame,T.Accent,1,0.3)
-lbl(wmFrame,"🔪 MM2 Short 1I",12,T.Text,Enum.Font.GothamBold,Enum.TextXAlignment.Left,UDim2.new(0,10,0,0),UDim2.new(0.6,0,1,0))
+lbl(wmFrame,"🔪 MM2 Short 1J",12,T.Text,Enum.Font.GothamBold,Enum.TextXAlignment.Left,UDim2.new(0,10,0,0),UDim2.new(0.6,0,1,0))
 local wmInfo=lbl(wmFrame,"",10,T.Hero,Enum.Font.GothamBold,Enum.TextXAlignment.Right,UDim2.new(0.6,0,0,0),UDim2.new(0.4,-10,1,0))
 
 -- ROLE DETECTION
@@ -115,7 +116,6 @@ local function scanForTools(container)
 end
 local function getPlayerRole(player)
     if not player then return "innocent" end
-    -- nejdřív zkus atributy (novější MM2)
     local ok, attr = pcall(function() return player:GetAttribute("Role") end)
     if ok and type(attr) == "string" then
         local a = attr:lower()
@@ -218,32 +218,22 @@ local function SkidFling(TargetPlayer, offset)
             if RootPart and THumanoid then
                 if BasePart.Velocity.Magnitude < 50 then
                     Angle = Angle + 100
-                    FPos(BasePart, CFrame.new(0, 1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0))
-                    task.wait()
-                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0))
-                    task.wait()
-                    FPos(BasePart, CFrame.new(0, 1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0))
-                    task.wait()
-                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0))
-                    task.wait()
+                    FPos(BasePart, CFrame.new(0, 1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0)) task.wait()
+                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0)) task.wait()
+                    FPos(BasePart, CFrame.new(0, 1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0)) task.wait()
+                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0)) task.wait()
                 else
-                    FPos(BasePart, CFrame.new(0, 1.5, 0), CFrame.Angles(math.rad(90), 0, 0))
-                    task.wait()
-                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0))
-                    task.wait()
-                    FPos(BasePart, CFrame.new(0, 1.5, 0), CFrame.Angles(math.rad(90), 0, 0))
-                    task.wait()
-                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0))
-                    task.wait()
+                    FPos(BasePart, CFrame.new(0, 1.5, 0), CFrame.Angles(math.rad(90), 0, 0)) task.wait()
+                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0)) task.wait()
+                    FPos(BasePart, CFrame.new(0, 1.5, 0), CFrame.Angles(math.rad(90), 0, 0)) task.wait()
+                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0)) task.wait()
                 end
             end
         until Time + TimeToWait < tick() or not FlingActive
     end
     Workspace.FallenPartsDestroyHeight = 0/0
-    local BV = Instance.new("BodyVelocity")
-    BV.Parent = RootPart
-    BV.Velocity = Vector3.new(0, 0, 0)
-    BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    local BV = Instance.new("BodyVelocity") BV.Parent = RootPart
+    BV.Velocity = Vector3.new(0, 0, 0) BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
     Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
     if TRootPart then SFBasePart(TRootPart)
     elseif THead then SFBasePart(THead)
@@ -285,7 +275,6 @@ local function baybladePlayer(targetName)
     if BaybladeActive then notify("Bayblade", "Already active"); return false end
     BaybladeActive = true
     notify("Bayblade", "Started on " .. target.Name)
-
     task.spawn(function()
         local Timeout = tick() + 10
         while BaybladeActive and tick() < Timeout do
@@ -322,8 +311,8 @@ local GUI = mount(Instance.new("ScreenGui"))
 GUI.Name = "MM2Short" GUI.ResetOnSpawn = false GUI.DisplayOrder = 999
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 360, 0, 520)
-Main.Position = UDim2.new(0.5, -180, 0.5, -260)
+Main.Size = UDim2.new(0, 380, 0, 540)
+Main.Position = UDim2.new(0.5, -190, 0.5, -270)
 Main.BackgroundColor3 = T.BG
 Main.BorderSizePixel = 0
 Main.Active = true
@@ -337,7 +326,7 @@ TitleBar.BackgroundColor3 = T.Surface
 TitleBar.BorderSizePixel = 0
 TitleBar.Parent = Main
 corner(TitleBar, 10)
-lbl(TitleBar, "🔪  MM2 Short 1I", 15, T.Text, Enum.Font.GothamBold, Enum.TextXAlignment.Left, UDim2.new(0,14,0,0), UDim2.new(1,-100,1,0))
+lbl(TitleBar, "🔪  MM2 Short 1J", 15, T.Text, Enum.Font.GothamBold, Enum.TextXAlignment.Left, UDim2.new(0,14,0,0), UDim2.new(1,-100,1,0))
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 26, 0, 26)
 closeBtn.Position = UDim2.new(1, -32, 0.5, -13)
@@ -373,7 +362,7 @@ do
     end)
 end
 
--- TAB BAR
+-- TAB BAR (6 tabů)
 local TabBar = Instance.new("Frame")
 TabBar.Size = UDim2.new(1, 0, 0, 36)
 TabBar.Position = UDim2.new(0, 0, 0, 40)
@@ -381,7 +370,6 @@ TabBar.BackgroundColor3 = Color3.fromRGB(14,14,17)
 TabBar.BorderSizePixel = 0
 TabBar.ZIndex = 1
 TabBar.Parent = Main
-
 local TabLayout = Instance.new("UIListLayout")
 TabLayout.FillDirection = Enum.FillDirection.Horizontal
 TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -411,18 +399,18 @@ local function switchTab(tab)
     tab.btn.TextColor3 = T.Text
     tab.btn.BackgroundTransparency = 0.6
 end
-
 local tabOrder = 0
+local TAB_COUNT = 7
 local function makeTab(name)
     tabOrder = tabOrder + 1
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1/5, -4, 1, -4)
+    btn.Size = UDim2.new(1/TAB_COUNT, -3, 1, -4)
     btn.BackgroundColor3 = T.Surface
     btn.BackgroundTransparency = 1
     btn.Text = name
     btn.TextColor3 = T.Faint
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 11
+    btn.TextSize = 10
     btn.BorderSizePixel = 0
     btn.AutoButtonColor = false
     btn.Active = true
@@ -593,8 +581,7 @@ local function makeSlider(parent, name, min, max, default, suffix, cb)
     hit.Parent = row
     hit.InputBegan:Connect(function(i)
         if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-            grabbing = true
-            setFromX(i.Position.X)
+            grabbing = true; setFromX(i.Position.X)
         end
     end)
     UserInputService.InputChanged:Connect(function(i)
@@ -603,9 +590,7 @@ local function makeSlider(parent, name, min, max, default, suffix, cb)
         end
     end)
     UserInputService.InputEnded:Connect(function(i)
-        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-            grabbing = false
-        end
+        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then grabbing = false end
     end)
     return {get=function() return value end}
 end
@@ -627,7 +612,9 @@ local tInfo = makeTab("Info")
 local tESP  = makeTab("ESP")
 local tAim  = makeTab("Aim")
 local tMove = makeTab("Move")
+local tTP   = makeTab("TP")
 local tFun  = makeTab("Fun")
+local tFarm = makeTab("Farm")
 
 -- INFO
 local secRoles = makeSection(tInfo, "Role Info")
@@ -651,15 +638,16 @@ local espDead = makeToggle(secESP, "Dead ESP", "Show ghosts")
 local espBox = makeToggle(secESP, "Box", "Draw box around players")
 local espName = makeToggle(secESP, "Name", "Show player name")
 local espRole = makeToggle(secESP, "Role Text", "Show role under name")
+
 local secXray = makeSection(tESP, "X-Ray")
 local savedLighting = nil
-local xrayEnabled = makeToggle(secXray, "X-Ray", "Brighten world / see through", function(on)
+local xrayEnabled = makeToggle(secXray, "X-Ray (Light)", "Brighten world", function(on)
     if on then
         savedLighting = {Amb = Lighting.Ambient, Out = Lighting.OutdoorAmbient, Br = Lighting.Brightness}
         Lighting.Ambient = Color3.fromRGB(200,200,200)
         Lighting.OutdoorAmbient = Color3.fromRGB(200,200,200)
         Lighting.Brightness = 3
-        notify("X-Ray", "ON")
+        notify("X-Ray", "Light ON")
     else
         if savedLighting then
             Lighting.Ambient = savedLighting.Amb
@@ -667,9 +655,31 @@ local xrayEnabled = makeToggle(secXray, "X-Ray", "Brighten world / see through",
             Lighting.Brightness = savedLighting.Br
             savedLighting = nil
         end
-        notify("X-Ray", "OFF")
+        notify("X-Ray", "Light OFF")
     end
 end)
+local xrayPartsEnabled = makeToggle(secXray, "X-Ray (Parts)", "Transparent walls", function(on)
+    if on then
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                local anc = v:FindFirstAncestorOfClass("Model")
+                local isChar = false
+                while anc do
+                    if anc:FindFirstChildOfClass("Humanoid") then isChar = true break end
+                    anc = anc:FindFirstAncestorOfClass("Model")
+                end
+                if not isChar then v.LocalTransparencyModifier = 0.75 end
+            end
+        end
+        notify("X-Ray", "Parts ON")
+    else
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("BasePart") then v.LocalTransparencyModifier = 0 end
+        end
+        notify("X-Ray", "Parts OFF")
+    end
+end)
+
 local secWeaponESP = makeSection(tESP, "Weapon ESP")
 local espGun = makeToggle(secWeaponESP, "Show Gun", "Blue")
 local espKnife = makeToggle(secWeaponESP, "Show Knife", "Red")
@@ -677,9 +687,6 @@ local espNone = makeToggle(secWeaponESP, "Show No Weapon", "Green")
 local secGunDrop = makeSection(tESP, "GunDrop ESP")
 local gunDropEnabled = makeToggle(secGunDrop, "Enable GunDrop ESP", "Highlight dropped gun")
 local autoGrab = makeToggle(secGunDrop, "Auto Grab GunDrop", "TP + pick + return")
-local gunDropColor = T.Gun
-local gunDropObjects = {}
-local gunDropGui = nil
 
 -- AIM
 local secAim = makeSection(tAim, "Aimbot")
@@ -688,18 +695,14 @@ local aimSmooth = makeSlider(secAim, "Smoothness", 1, 20, 8, "x", function() end
 local aimFOV = makeSlider(secAim, "FOV", 20, 400, 120, "px", function() end)
 local aimTargetMode = "murderer"
 makeButton(secAim, "🎯 Target: MURDERER", Color3.fromRGB(100,20,20), function()
-    aimTargetMode = "murderer"
-    notify("Aim", "Target: Murderer")
+    aimTargetMode = "murderer"; notify("Aim", "Target: Murderer")
 end)
 makeButton(secAim, "🎯 Target: SHERIFF", Color3.fromRGB(30,60,120), function()
-    aimTargetMode = "sheriff"
-    notify("Aim", "Target: Sheriff")
+    aimTargetMode = "sheriff"; notify("Aim", "Target: Sheriff")
 end)
 makeButton(secAim, "🎯 Target: HERO", Color3.fromRGB(120,90,0), function()
-    aimTargetMode = "hero"
-    notify("Aim", "Target: Hero")
+    aimTargetMode = "hero"; notify("Aim", "Target: Hero")
 end)
-
 local secAimPlayer = makeSection(tAim, "Aim at Player")
 local aimPlayerBox = makeTextBox(secAimPlayer, "Player name...")
 makeButton(secAimPlayer, "🎯 Aim at Player", Color3.fromRGB(60,60,120), function()
@@ -725,6 +728,27 @@ makeSlider(secMove, "Jump Power", 0, 300, 50, "", function(v)
     if h then h.UseJumpPower = true h.JumpPower = v end
 end)
 local boostOnJump = makeToggle(secMove, "Boost on Jump", "75 speed when jumping")
+
+local secExtraMove = makeSection(tMove, "Extra Movement")
+local noclipEnabled = false
+local infJumpEnabled = false
+local noclipToggle = makeToggle(secExtraMove, "Noclip", "Walk through walls [C]", function(on)
+    noclipEnabled = on
+    if on and LP.Character then
+        for _, p in ipairs(LP.Character:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = false end
+        end
+    else
+        if LP.Character then
+            for _, p in ipairs(LP.Character:GetDescendants()) do
+                if p:IsA("BasePart") then p.CanCollide = true end
+            end
+        end
+    end
+end)
+local infJumpToggle = makeToggle(secExtraMove, "Infinite Jump", "Jump while in air [V]", function(on)
+    infJumpEnabled = on
+end)
 
 -- FLY
 local flyEnabled
@@ -768,6 +792,77 @@ local function stopFly()
 end
 flyEnabled = makeToggle(secMove, "Fly", "WASD + Space/Ctrl", function(on)
     if on then startFly() else stopFly() end
+end)
+
+-- TELEPORT
+local function tpToPlayer(p)
+    if not p or not p.Character then notify("TP", "Player not in game"); return end
+    local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    local tr = p.Character:FindFirstChild("HumanoidRootPart")
+    if myRoot and tr then
+        myRoot.CFrame = tr.CFrame + Vector3.new(0, 3, 0)
+        notify("TP", "To " .. p.Name)
+    end
+end
+local function tpToRole(role)
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LP and p.Character and getPlayerRole(p) == role then
+            tpToPlayer(p) return
+        end
+    end
+    notify("TP", "No " .. role)
+end
+
+local secTPPlayers = makeSection(tTP, "Teleport to Role")
+makeButton(secTPPlayers, "🔪 TP to Murderer", Color3.fromRGB(100,20,20), function() tpToRole("murderer") end)
+makeButton(secTPPlayers, "🔫 TP to Sheriff", Color3.fromRGB(30,60,120), function() tpToRole("sheriff") end)
+makeButton(secTPPlayers, "🦸 TP to Hero", Color3.fromRGB(120,90,0), function() tpToRole("hero") end)
+
+local secTPMap = makeSection(tTP, "Teleport to Map")
+makeButton(secTPMap, "🏠 TP to Lobby", Color3.fromRGB(40,80,40), function()
+    local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
+    -- hledá spawn / lobby
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and (obj.Name:lower():find("lobby") or obj.Name:lower():find("spawn")) then
+            myRoot.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+            notify("TP", "Lobby")
+            return
+        end
+    end
+    notify("TP", "Lobby not found")
+end)
+makeButton(secTPMap, "🗺️ TP to Map", Color3.fromRGB(40,60,80), function()
+    local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
+    -- hledá Spawns.Spawn
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        local spawns = obj:FindFirstChild("Spawns")
+        if spawns then
+            local sp = spawns:FindFirstChild("Spawn")
+            if sp and sp:IsA("BasePart") then
+                myRoot.CFrame = sp.CFrame + Vector3.new(0, 3, 0)
+                notify("TP", "Map")
+                return
+            end
+        end
+    end
+    -- fallback: první SpawnLocation
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("SpawnLocation") then
+            myRoot.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+            notify("TP", "Map (fallback)")
+            return
+        end
+    end
+    notify("TP", "Map not found")
+end)
+
+local secTPName = makeSection(tTP, "Teleport to Player")
+local tpPlayerBox = makeTextBox(secTPName, "Player name...")
+makeButton(secTPName, "📍 TP to Player", Color3.fromRGB(60,60,120), function()
+    local tgt = Players:FindFirstChild(tpPlayerBox.Text)
+    if tgt then tpToPlayer(tgt) else notify("TP", "Not found") end
 end)
 
 -- FUN
@@ -824,17 +919,7 @@ makeButton(secFun, "🌀 Bayblade Selected", Color3.fromRGB(80,20,120), function
     if not selectedTarget then notify("Bayblade", "Select a player first"); return end
     baybladePlayer(selectedTarget)
 end)
-makeButton(secFun, "📍 Teleport to Selected", Color3.fromRGB(30,60,100), function()
-    if not selectedTarget then notify("TP", "Select a player first"); return end
-    local t = Players:FindFirstChild(selectedTarget)
-    if t and t.Character then
-        local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-        local tr = t.Character:FindFirstChild("HumanoidRootPart")
-        if r and tr then r.CFrame = tr.CFrame + Vector3.new(0,3,0); notify("TP", "To "..t.Name) end
-    end
-end)
 
--- KILL HELPERS
 local function killPlayerB(target)
     if not target or not target.Character then return end
     task.spawn(function()
@@ -864,41 +949,31 @@ end
 local secRole = makeSection(tFun, "Role Actions")
 makeButton(secRole, "💥 Fling Murderer", Color3.fromRGB(100,20,20), function()
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LP and getPlayerRole(p) == "murderer" then
-            flingPlayer(p.Name) return
-        end
+        if p ~= LP and getPlayerRole(p) == "murderer" then flingPlayer(p.Name) return end
     end
     notify("Fling", "No murderer detected")
 end)
 makeButton(secRole, "💥 Fling Sheriff", Color3.fromRGB(30,60,120), function()
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LP and getPlayerRole(p) == "sheriff" then
-            flingPlayer(p.Name) return
-        end
+        if p ~= LP and getPlayerRole(p) == "sheriff" then flingPlayer(p.Name) return end
     end
     notify("Fling", "No sheriff detected")
 end)
 makeButton(secRole, "🌀 Bayblade Murderer", Color3.fromRGB(80,20,120), function()
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LP and getPlayerRole(p) == "murderer" then
-            baybladePlayer(p.Name) return
-        end
+        if p ~= LP and getPlayerRole(p) == "murderer" then baybladePlayer(p.Name) return end
     end
     notify("Bayblade", "No murderer detected")
 end)
 makeButton(secRole, "🌀 Bayblade Sheriff", Color3.fromRGB(60,40,120), function()
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LP and getPlayerRole(p) == "sheriff" then
-            baybladePlayer(p.Name) return
-        end
+        if p ~= LP and getPlayerRole(p) == "sheriff" then baybladePlayer(p.Name) return end
     end
     notify("Bayblade", "No sheriff detected")
 end)
 makeButton(secRole, "🔪 Kill Murderer (B)", Color3.fromRGB(120,0,0), function()
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LP and getPlayerRole(p) == "murderer" then
-            killPlayerB(p) return
-        end
+        if p ~= LP and getPlayerRole(p) == "murderer" then killPlayerB(p) return end
     end
     notify("Kill", "No murderer")
 end)
@@ -919,10 +994,84 @@ makeButton(secKillAll, "💀 Kill All (B - auto attack)", Color3.fromRGB(150,0,0
     end)
 end)
 
--- GUN GRABBER
+-- GUNDROP ESP (přesná detekce)
+local gunDropColor = T.Gun
+local gunDropObjects = {}
+local gunDropGui = nil
+
+local function isGunDrop(obj)
+    if not obj then return false end
+    if not (obj:IsA("Model") or obj:IsA("Tool") or obj:IsA("BasePart")) then return false end
+    local anc = obj:FindFirstAncestorOfClass("Model")
+    while anc do
+        if anc:FindFirstChildOfClass("Humanoid") then return false end
+        anc = anc:FindFirstAncestorOfClass("Model")
+        if anc and anc == Workspace then break end
+        if anc and anc.Parent == Workspace then break end
+    end
+    if obj.Parent and obj.Parent:FindFirstChildOfClass("Humanoid") then return false end
+    if obj:IsA("Tool") then return false end
+    local n = obj.Name:lower()
+    if n == "gundrop" or n == "gun drop" or n == "gundropped" or n == "revolverdrop" then return true end
+    return false
+end
+
+local function getGunDropPos(obj)
+    if not obj then return nil end
+    if obj:IsA("BasePart") then return obj.Position end
+    local pp = obj:FindFirstChild("PrimaryPart")
+    if pp and pp:IsA("BasePart") then return pp.Position end
+    local parts = {}
+    for _, d in ipairs(obj:GetDescendants()) do
+        if d:IsA("BasePart") then table.insert(parts, d) end
+    end
+    if #parts == 0 then return nil end
+    local sum = Vector3.zero
+    for _, p in ipairs(parts) do sum = sum + p.Position end
+    return sum / #parts
+end
+
+local function createGunDropESP(obj)
+    if gunDropObjects[obj] then return end
+    local pos = getGunDropPos(obj)
+    if not pos then return end
+    if not gunDropGui then
+        gunDropGui = mount(Instance.new("ScreenGui"))
+        gunDropGui.Name = "MM2GunDrop" gunDropGui.ResetOnSpawn = false gunDropGui.DisplayOrder = 994
+    end
+    local hl = Instance.new("Highlight") hl.Parent = obj hl.FillColor = gunDropColor hl.FillTransparency = 0.4 hl.OutlineColor = gunDropColor hl.OutlineTransparency = 0.2 hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    local frame = Instance.new("Frame") frame.Size = UDim2.new(0,120,0,20) frame.BackgroundTransparency = 1 frame.Parent = gunDropGui
+    local txt = Instance.new("TextLabel") txt.Size = UDim2.new(1,0,1,0) txt.BackgroundTransparency = 1 txt.Text = "GunDrop" txt.TextColor3 = gunDropColor txt.Font = Enum.Font.GothamBold txt.TextSize = 12 txt.TextStrokeTransparency = 0 txt.Parent = frame
+    gunDropObjects[obj] = {hl=hl, frame=frame}
+end
+local function clearGunDropESP()
+    for obj, data in pairs(gunDropObjects) do
+        pcall(function() data.hl:Destroy() end) pcall(function() data.frame:Destroy() end)
+    end
+    gunDropObjects = {}
+    if gunDropGui then pcall(function() gunDropGui:Destroy() end) gunDropGui=nil end
+end
+local function updateGunDropPositions()
+    for obj, data in pairs(gunDropObjects) do
+        if not obj or not obj.Parent then
+            pcall(function() data.hl:Destroy() end) pcall(function() data.frame:Destroy() end)
+            gunDropObjects[obj] = nil
+        else
+            local pos = getGunDropPos(obj)
+            if pos then
+                local sp, onScreen = Camera:WorldToScreenPoint(pos)
+                if onScreen then
+                    data.frame.Position = UDim2.new(0, sp.X - 60, 0, sp.Y - 10)
+                    data.frame.Visible = true
+                else data.frame.Visible = false end
+            else data.frame.Visible = false end
+        end
+    end
+end
+
 local grabReturnPos = nil
 local function tryGrabGunDrop(obj)
-    local pos = getGunDropPos and getGunDropPos(obj) or nil
+    local pos = getGunDropPos(obj)
     if not pos then return end
     local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not myRoot then return end
@@ -954,7 +1103,6 @@ makeButton(secGrab, "🎯 Grab Nearest GunDrop", Color3.fromRGB(0,80,180), funct
     end
     if best then tryGrabGunDrop(best) else notify("Grab", "No gun drop found") end
 end)
--- AutoGrab listener je navěšen níže, po definici isGunDrop
 
 -- ANTI-LAG
 local secLag = makeSection(tFun, "Performance")
@@ -976,11 +1124,60 @@ makeButton(secLag, "⚡ Anti-Lag / FPS Boost", Color3.fromRGB(0,120,80), functio
     notify("Anti-Lag", "Applied")
 end)
 
+-- FARM
+local secFarm = makeSection(tFarm, "Auto Farm")
+local coinFarmToggle = makeToggle(secFarm, "Coin Farm", "RISKY - auto collect coins", false, function() end)
+
+-- Anti-AFK
+local secAFK = makeSection(tFarm, "Anti-AFK")
+local antiAfkEnabled = makeToggle(secAFK, "Anti-AFK", "Prevent kick for idle", true)
+
+-- Anti-AFK connection
+local afkConn = nil
+local function startAntiAfk()
+    if afkConn then return end
+    afkConn = LP.Idled:Connect(function()
+        if not antiAfkEnabled:get() then return end
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+    end)
+end
+startAntiAfk()
+
+-- Coin Farm loop
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if coinFarmToggle:get() then
+            pcall(function()
+                local myChar = LP.Character
+                local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                if not myRoot then return end
+                local savedX, savedY, savedZ = myRoot.CFrame.X, myRoot.CFrame.Y, myRoot.CFrame.Z
+                for _, obj in ipairs(Workspace:GetChildren()) do
+                    local cc = obj:FindFirstChild("CoinContainer")
+                    if cc then
+                        local srv = cc:FindFirstChild("Coin_Server")
+                        if srv then
+                            local coin = srv:FindFirstChild("Coin")
+                            if coin and coin:IsA("BasePart") then
+                                myRoot.CFrame = coin.CFrame
+                                task.wait(0.05)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
 -- ESP UPDATE
 local espHighlights = {}
 local espBillboards = {}
 local weaponHighlights = {}
-
 local function removeESP(name)
     if espHighlights[name] then pcall(function() espHighlights[name]:Destroy() end) espHighlights[name]=nil end
     if espBillboards[name] then pcall(function() espBillboards[name].bb:Destroy() end) espBillboards[name]=nil end
@@ -988,7 +1185,6 @@ end
 local function removeWeaponESP(name)
     if weaponHighlights[name] then pcall(function() weaponHighlights[name]:Destroy() end) weaponHighlights[name]=nil end
 end
-
 local function updateESP()
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LP and p.Character then
@@ -1057,83 +1253,7 @@ local function updateESP()
     end
 end
 
--- GUNDROP ESP (přesná detekce)
-local function isGunDrop(obj)
-    if not obj then return false end
-    if not (obj:IsA("Model") or obj:IsA("Tool") or obj:IsA("BasePart")) then return false end
-    -- Nesmí být uvnitř characteru hráče
-    local anc = obj:FindFirstAncestorOfClass("Model")
-    while anc do
-        if anc:FindFirstChildOfClass("Humanoid") then return false end
-        anc = anc:FindFirstAncestorOfClass("Model")
-        if anc and anc == Workspace then break end
-        if anc and anc.Parent == Workspace then break end
-    end
-    if obj.Parent and obj.Parent:FindFirstChildOfClass("Humanoid") then return false end
-    -- Tooly vybavené hráčem nejsou drop
-    if obj:IsA("Tool") then return false end
-    local n = obj.Name:lower()
-    if n == "gundrop" or n == "gun drop" or n == "gundropped" or n == "revolverdrop" then return true end
-    return false
-end
-
-local function getGunDropPos(obj)
-    if not obj then return nil end
-    if obj:IsA("BasePart") then return obj.Position end
-    local pp = obj:FindFirstChild("PrimaryPart")
-    if pp and pp:IsA("BasePart") then return pp.Position end
-    local parts = {}
-    for _, d in ipairs(obj:GetDescendants()) do
-        if d:IsA("BasePart") then table.insert(parts, d) end
-    end
-    if #parts == 0 then return nil end
-    local sum = Vector3.zero
-    for _, p in ipairs(parts) do sum = sum + p.Position end
-    return sum / #parts
-end
-
-local function createGunDropESP(obj)
-    if gunDropObjects[obj] then return end
-    local pos = getGunDropPos(obj)
-    if not pos then return end
-    if not gunDropGui then
-        gunDropGui = mount(Instance.new("ScreenGui"))
-        gunDropGui.Name = "MM2GunDrop" gunDropGui.ResetOnSpawn = false gunDropGui.DisplayOrder = 994
-    end
-    local hl = Instance.new("Highlight") hl.Parent = obj hl.FillColor = gunDropColor hl.FillTransparency = 0.4 hl.OutlineColor = gunDropColor hl.OutlineTransparency = 0.2 hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    local frame = Instance.new("Frame") frame.Size = UDim2.new(0,120,0,20) frame.BackgroundTransparency = 1 frame.Parent = gunDropGui
-    local txt = Instance.new("TextLabel") txt.Size = UDim2.new(1,0,1,0) txt.BackgroundTransparency = 1 txt.Text = "GunDrop" txt.TextColor3 = gunDropColor txt.Font = Enum.Font.GothamBold txt.TextSize = 12 txt.TextStrokeTransparency = 0 txt.Parent = frame
-    gunDropObjects[obj] = {hl=hl, frame=frame}
-end
-local function clearGunDropESP()
-    for obj, data in pairs(gunDropObjects) do
-        pcall(function() data.hl:Destroy() end) pcall(function() data.frame:Destroy() end)
-    end
-    gunDropObjects = {}
-    if gunDropGui then pcall(function() gunDropGui:Destroy() end) gunDropGui=nil end
-end
-local function scanGunDrops()
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        if isGunDrop(obj) then createGunDropESP(obj) end
-    end
-end
-local function updateGunDropPositions()
-    for obj, data in pairs(gunDropObjects) do
-        if not obj or not obj.Parent then
-            pcall(function() data.hl:Destroy() end) pcall(function() data.frame:Destroy() end)
-            gunDropObjects[obj] = nil
-        else
-            local pos = getGunDropPos(obj)
-            if pos then
-                local sp, onScreen = Camera:WorldToScreenPoint(pos)
-                if onScreen then
-                    data.frame.Position = UDim2.new(0, sp.X - 60, 0, sp.Y - 10)
-                    data.frame.Visible = true
-                else data.frame.Visible = false end
-            else data.frame.Visible = false end
-        end
-    end
-end
+-- AutoGrab + GunDrop listener
 Workspace.DescendantAdded:Connect(function(obj)
     if gunDropEnabled:get() and isGunDrop(obj) then createGunDropESP(obj) end
     if autoGrab:get() and isGunDrop(obj) then
@@ -1160,8 +1280,7 @@ local function startAimbot()
                     local sp, onScreen = Camera:WorldToScreenPoint(hrp.Position)
                     if onScreen and sp.Z > 0 then
                         local d = (Vector2.new(sp.X, sp.Y) - center).Magnitude
-                        if d < aimFOV.get() and d < closestDist then
-                            closestDist = d closest = hrp.Position
+                        if d < aimFOV.get() and d < closestDist then                            closestDist = d closest = hrp.Position
                         end
                     end
                 end
@@ -1176,7 +1295,22 @@ local function startAimbot()
 end
 startAimbot()
 
--- BOOST ON JUMP
+-- NOCLIP + INFJUMP + BOOST loops
+RunService.Stepped:Connect(function()
+    if noclipEnabled and LP.Character then
+        for _, p in ipairs(LP.Character:GetDescendants()) do
+            if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end
+        end
+        local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+        if hum then pcall(function() hum:ChangeState(Enum.HumanoidStateType.Physics) end) end
+    end
+end)
+UserInputService.JumpRequest:Connect(function()
+    if infJumpEnabled and LP.Character then
+        local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+        if hum then pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end) end
+    end
+end)
 RunService.Heartbeat:Connect(function()
     if not boostOnJump:get() then return end
     local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
@@ -1204,7 +1338,7 @@ UserInputService.InputBegan:Connect(function(input, gpe)
         Main.Visible = not Main.Visible
         if Main.Visible then refreshPlayerPicker() end
     elseif input.KeyCode == Enum.KeyCode.Delete then
-        for _, t in ipairs({espMurd,espSher,espHero,espInno,espDead,espBox,espName,espRole,espGun,espKnife,espNone,gunDropEnabled,autoGrab,aimEnabled,boostOnJump,xrayEnabled,flyEnabled}) do t:set(false) end
+        for _, t in ipairs({espMurd,espSher,espHero,espInno,espDead,espBox,espName,espRole,espGun,espKnife,espNone,gunDropEnabled,autoGrab,aimEnabled,boostOnJump,xrayEnabled,xrayPartsEnabled,flyEnabled,noclipToggle,infJumpToggle,coinFarmToggle}) do t:set(false) end
         FlingActive = false BaybladeActive = false clearGunDropESP()
         pcall(stopFly)
         pcall(function() Workspace.FallenPartsDestroyHeight = FlingFPDH end)
@@ -1214,6 +1348,10 @@ UserInputService.InputBegan:Connect(function(input, gpe)
         wmFrame.Visible = not wmFrame.Visible
     elseif input.KeyCode == Enum.KeyCode.E then
         aimEnabled:set(not aimEnabled:get())
+    elseif input.KeyCode == Enum.KeyCode.C then
+        noclipToggle:set(not noclipToggle:get())
+    elseif input.KeyCode == Enum.KeyCode.V then
+        infJumpToggle:set(not infJumpToggle:get())
     end
 end)
 
@@ -1262,7 +1400,6 @@ RunService.Heartbeat:Connect(function(dt)
 end)
 
 refreshPlayerPicker()
-if gunDropEnabled:get() then scanGunDrops() end
 
 _G.__MM2Short_Destroy = function()
     FlingActive = false BaybladeActive = false
