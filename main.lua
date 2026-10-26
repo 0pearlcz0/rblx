@@ -1,8 +1,8 @@
 -- ══════════════════════════════════════════════════════════════
---  MM2 SHORT — PHASE 1F (fix tabs + fling/bayblade murderer/sheriff)
+--  MM2 SHORT — PHASE 1G (mobile/touch support)
 --  INSERT = menu · DELETE = panic · END = watermark
 -- ══════════════════════════════════════════════════════════════
-local BUILD = "PHASE-1F"
+local BUILD = "PHASE-1G"
 
 pcall(function() if _G.__MM2Short_Destroy then _G.__MM2Short_Destroy() end end)
 
@@ -36,6 +36,7 @@ local T = {
     None    = Color3.fromRGB(0,220,80),
 }
 
+-- HELPERS
 local function tw(i,p,t,s,d)
     local tween = TweenService:Create(i, TweenInfo.new(t or 0.25, s or Enum.EasingStyle.Quint, d or Enum.EasingDirection.Out), p)
     tween:Play() return tween
@@ -206,10 +207,6 @@ local function SkidFling(TargetPlayer, offset)
                     task.wait()
                     FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0))
                     task.wait()
-                    FPos(BasePart, CFrame.new(0, 1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0))
-                    task.wait()
-                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0))
-                    task.wait()
                 else
                     FPos(BasePart, CFrame.new(0, 1.5, 0), CFrame.Angles(math.rad(90), 0, 0))
                     task.wait()
@@ -334,7 +331,7 @@ closeBtn.TextSize = 13
 closeBtn.BorderSizePixel = 0
 closeBtn.Parent = TitleBar
 corner(closeBtn, 6)
-closeBtn.MouseButton1Click:Connect(function() Main.Visible = false end)
+closeBtn.Activated:Connect(function() Main.Visible = false end)
 
 do
     local dragging=false local dragStart=nil local startPos=nil
@@ -356,7 +353,7 @@ do
     end)
 end
 
--- TAB BAR (opraveno: UIListLayout + UIPadding)
+-- TAB BAR
 local TabBar = Instance.new("Frame")
 TabBar.Size = UDim2.new(1, 0, 0, 36)
 TabBar.Position = UDim2.new(0, 0, 0, 40)
@@ -425,7 +422,7 @@ local function makeTab(name)
     local sl = Instance.new("UIListLayout") sl.Padding = UDim.new(0,6) sl.Parent = scroll
     local sp = Instance.new("UIPadding") sp.PaddingLeft = UDim.new(0,10) sp.PaddingRight = UDim.new(0,10) sp.PaddingTop = UDim.new(0,10) sp.PaddingBottom = UDim.new(0,10) sp.Parent = scroll
     local tab = {btn=btn, scroll=scroll}
-    btn.MouseButton1Click:Connect(function() switchTab(tab) end)
+    btn.Activated:Connect(function() switchTab(tab) end)
     tabs[name]=tab
     if not activeTab then switchTab(tab) end
     return tab
@@ -482,7 +479,7 @@ local function makeToggle(parent, name, desc, callback)
     btn.BackgroundTransparency = 1
     btn.Text = ""
     btn.Parent = row
-    btn.MouseButton1Click:Connect(function() h:set(not on) end)
+    btn.Activated:Connect(function() h:set(not on) end)
     return h
 end
 
@@ -500,7 +497,7 @@ local function makeButton(parent, name, col, cb)
     corner(btn, 6) stroke(btn, col or T.Accent, 1, 0.5)
     btn.MouseEnter:Connect(function() tw(btn,{BackgroundColor3=T.Accent}) end)
     btn.MouseLeave:Connect(function() tw(btn,{BackgroundColor3=col or T.AccentDrk}) end)
-    btn.MouseButton1Click:Connect(function() pcall(cb) end)
+    btn.Activated:Connect(function() pcall(cb) end)
     return btn
 end
 
@@ -551,9 +548,22 @@ local function makeSlider(parent, name, min, max, default, suffix, cb)
     hit.BackgroundTransparency = 1
     hit.Text = ""
     hit.Parent = row
-    hit.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then grabbing=true setFromX(i.Position.X) end end)
-    UserInputService.InputChanged:Connect(function(i) if grabbing and i.UserInputType==Enum.UserInputType.MouseMovement then setFromX(i.Position.X) end end)
-    UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 and grabbing then grabbing=false end end)
+    hit.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+            grabbing = true
+            setFromX(i.Position.X)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if grabbing and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
+            setFromX(i.Position.X)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+            grabbing = false
+        end
+    end)
     return {get=function() return value end}
 end
 
@@ -669,7 +679,7 @@ local function refreshPlayerPicker()
             row.AutoButtonColor = false
             row.Parent = pickerScroll
             corner(row, 4)
-            row.MouseButton1Click:Connect(function()
+            row.Activated:Connect(function()
                 selectedTarget = p.Name
                 refreshPlayerPicker()
             end)
