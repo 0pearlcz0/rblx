@@ -1,8 +1,8 @@
 -- ══════════════════════════════════════════════════════════════
---  MM2 SHORT — PHASE 1E (player picker + bayblade + aimbot + venyx features)
+--  MM2 SHORT — PHASE 1F (fix tabs + fling/bayblade murderer/sheriff)
 --  INSERT = menu · DELETE = panic · END = watermark
 -- ══════════════════════════════════════════════════════════════
-local BUILD = "PHASE-1E"
+local BUILD = "PHASE-1F"
 
 pcall(function() if _G.__MM2Short_Destroy then _G.__MM2Short_Destroy() end end)
 
@@ -36,7 +36,6 @@ local T = {
     None    = Color3.fromRGB(0,220,80),
 }
 
--- HELPERS
 local function tw(i,p,t,s,d)
     local tween = TweenService:Create(i, TweenInfo.new(t or 0.25, s or Enum.EasingStyle.Quint, d or Enum.EasingDirection.Out), p)
     tween:Play() return tween
@@ -144,8 +143,6 @@ local function roleText(role, isDead)
     if isDead then return "DEAD" end
     return role=="murderer" and "MURDERER" or role=="sheriff" and "SHERIFF" or "INNOCENT"
 end
-
--- WEAPON DETECTION (z Venyx: Gun/Knife/None)
 local function getWeaponType(p)
     if not p or p == LP then return "None" end
     local function scan(container)
@@ -167,7 +164,6 @@ local FlingActive = false
 local FlingOldPos = nil
 local FlingFPDH = Workspace.FallenPartsDestroyHeight
 local BaybladeActive = false
-local BaybladeTarget = nil
 
 local function SkidFling(TargetPlayer, offset)
     local Character = LP.Character
@@ -187,16 +183,13 @@ local function SkidFling(TargetPlayer, offset)
     elseif Handle then Workspace.CurrentCamera.CameraSubject = Handle
     elseif THumanoid and TRootPart then Workspace.CurrentCamera.CameraSubject = THumanoid end
     if not TCharacter:FindFirstChildWhichIsA("BasePart") then return end
-
     offset = offset or 0
-
     local FPos = function(BasePart, Pos, Ang)
         RootPart.CFrame = CFrame.new(BasePart.Position) * CFrame.new(0, 0, -offset) * Pos * Ang
         Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * CFrame.new(0, 0, -offset) * Pos * Ang)
         RootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
         RootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
     end
-
     local SFBasePart = function(BasePart)
         local TimeToWait = 2
         local Time = tick()
@@ -230,18 +223,15 @@ local function SkidFling(TargetPlayer, offset)
             end
         until Time + TimeToWait < tick() or not FlingActive
     end
-
     Workspace.FallenPartsDestroyHeight = 0/0
     local BV = Instance.new("BodyVelocity")
     BV.Parent = RootPart
     BV.Velocity = Vector3.new(0, 0, 0)
     BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
     Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
-
     if TRootPart then SFBasePart(TRootPart)
     elseif THead then SFBasePart(THead)
     elseif Handle then SFBasePart(Handle) end
-
     BV:Destroy()
     Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
     Workspace.CurrentCamera.CameraSubject = Humanoid
@@ -273,13 +263,11 @@ local function flingPlayer(targetName)
     return true
 end
 
--- BAYBLADE: teleport 1 stud za oběť, roztočit, čekat než odletí
 local function baybladePlayer(targetName)
     local target = Players:FindFirstChild(targetName)
     if not target or not target.Character then notify("Bayblade", "Player not found"); return false end
     if BaybladeActive then notify("Bayblade", "Already active"); return false end
     BaybladeActive = true
-    BaybladeTarget = target
     notify("Bayblade", "Started on " .. target.Name)
 
     task.spawn(function()
@@ -290,32 +278,22 @@ local function baybladePlayer(targetName)
             local myChar = LP.Character
             local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
             if trp and myRoot then
-                -- 1 stud za obětí
                 local behind = trp.CFrame * CFrame.new(0, 0, -1)
                 pcall(function()
                     myRoot.CFrame = behind
                     myRoot.AssemblyAngularVelocity = Vector3.new(9e8, 9e8, 9e8)
                     myRoot.AssemblyLinearVelocity = Vector3.new(9e7, 9e7, 9e7)
                 end)
-                -- Pokud oběť už letí (rychlost > 200), skončit
                 local tv = trp.AssemblyLinearVelocity
-                if tv.Magnitude > 200 then
-                    break
-                end
-            else
-                break
-            end
+                if tv.Magnitude > 200 then break end
+            else break end
             task.wait()
         end
         BaybladeActive = false
-        BaybladeTarget = nil
-        -- návrat
         pcall(function()
             local myChar = LP.Character
             local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
-            if myRoot and FlingOldPos then
-                myRoot.CFrame = FlingOldPos
-            end
+            if myRoot and FlingOldPos then myRoot.CFrame = FlingOldPos end
             Workspace.FallenPartsDestroyHeight = FlingFPDH
         end)
         notify("Bayblade", "Done")
@@ -328,8 +306,8 @@ local GUI = mount(Instance.new("ScreenGui"))
 GUI.Name = "MM2Short" GUI.ResetOnSpawn = false GUI.DisplayOrder = 999
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 340, 0, 480)
-Main.Position = UDim2.new(0.5, -170, 0.5, -240)
+Main.Size = UDim2.new(0, 360, 0, 500)
+Main.Position = UDim2.new(0.5, -180, 0.5, -250)
 Main.BackgroundColor3 = T.BG
 Main.BorderSizePixel = 0
 Main.Active = true
@@ -378,18 +356,29 @@ do
     end)
 end
 
+-- TAB BAR (opraveno: UIListLayout + UIPadding)
 local TabBar = Instance.new("Frame")
 TabBar.Size = UDim2.new(1, 0, 0, 36)
 TabBar.Position = UDim2.new(0, 0, 0, 40)
 TabBar.BackgroundColor3 = Color3.fromRGB(14,14,17)
 TabBar.BorderSizePixel = 0
+TabBar.ZIndex = 1
 TabBar.Parent = Main
+
+local TabLayout = Instance.new("UIListLayout")
+TabLayout.FillDirection = Enum.FillDirection.Horizontal
+TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+TabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+TabLayout.Padding = UDim.new(0, 2)
+TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabLayout.Parent = TabBar
 
 local ContentArea = Instance.new("Frame")
 ContentArea.Size = UDim2.new(1, 0, 1, -76)
 ContentArea.Position = UDim2.new(0, 0, 0, 76)
 ContentArea.BackgroundTransparency = 1
 ContentArea.ClipsDescendants = true
+ContentArea.ZIndex = 2
 ContentArea.Parent = Main
 
 local tabs = {}
@@ -406,9 +395,11 @@ local function switchTab(tab)
     tab.btn.BackgroundTransparency = 0.6
 end
 
-local function makeTab(name, sizeFrac)
+local tabOrder = 0
+local function makeTab(name)
+    tabOrder = tabOrder + 1
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(sizeFrac or (1/4), -2, 1, 0)
+    btn.Size = UDim2.new(1/5, -4, 1, -4)
     btn.BackgroundColor3 = T.Surface
     btn.BackgroundTransparency = 1
     btn.Text = name
@@ -417,7 +408,9 @@ local function makeTab(name, sizeFrac)
     btn.TextSize = 11
     btn.BorderSizePixel = 0
     btn.AutoButtonColor = false
+    btn.LayoutOrder = tabOrder
     btn.Parent = TabBar
+    corner(btn, 4)
     local scroll = Instance.new("ScrollingFrame")
     scroll.Size = UDim2.new(1, 0, 1, 0)
     scroll.BackgroundTransparency = 1
@@ -427,6 +420,7 @@ local function makeTab(name, sizeFrac)
     scroll.ScrollBarThickness = 3
     scroll.ScrollBarImageColor3 = T.Accent
     scroll.Visible = false
+    scroll.ZIndex = 2
     scroll.Parent = ContentArea
     local sl = Instance.new("UIListLayout") sl.Padding = UDim.new(0,6) sl.Parent = scroll
     local sp = Instance.new("UIPadding") sp.PaddingLeft = UDim.new(0,10) sp.PaddingRight = UDim.new(0,10) sp.PaddingTop = UDim.new(0,10) sp.PaddingBottom = UDim.new(0,10) sp.Parent = scroll
@@ -576,18 +570,17 @@ local function makeLive(parent, text, initial, color)
 end
 
 -- TABS
-local tInfo = makeTab("Info", 1/5)
-local tESP  = makeTab("ESP", 1/5)
-local tAim  = makeTab("Aim", 1/5)
-local tMove = makeTab("Move", 1/5)
-local tFun  = makeTab("Fun", 1/5)
+local tInfo = makeTab("Info")
+local tESP  = makeTab("ESP")
+local tAim  = makeTab("Aim")
+local tMove = makeTab("Move")
+local tFun  = makeTab("Fun")
 
 -- INFO
 local secRoles = makeSection(tInfo, "Role Info")
 local lblMurd = makeLive(secRoles, "🔪 Murderer", "Detecting...", T.Murd)
 local lblSher = makeLive(secRoles, "🔫 Sheriff", "Detecting...", T.Sher)
 local lblMyRole = makeLive(secRoles, "👤 Your Role", "?", T.Text)
-
 local secStats = makeSection(tInfo, "Stats")
 local lblPlayers = makeLive(secStats, "Players", "0")
 local lblAlive = makeLive(secStats, "Alive", "0", T.Good)
@@ -603,12 +596,10 @@ local espDead = makeToggle(secESP, "Dead ESP", "Show ghosts")
 local espBox = makeToggle(secESP, "Box", "Draw box around players")
 local espName = makeToggle(secESP, "Name", "Show player name")
 local espRole = makeToggle(secESP, "Role Text", "Show role under name")
-
 local secWeaponESP = makeSection(tESP, "Weapon ESP")
 local espGun = makeToggle(secWeaponESP, "Show Gun", "Blue")
 local espKnife = makeToggle(secWeaponESP, "Show Knife", "Red")
 local espNone = makeToggle(secWeaponESP, "Show No Weapon", "Green")
-
 local secGunDrop = makeSection(tESP, "GunDrop ESP")
 local gunDropEnabled = makeToggle(secGunDrop, "Enable GunDrop ESP", "Highlight dropped gun")
 local gunDropColor = T.Gun
@@ -632,12 +623,12 @@ end)
 
 -- MOVE
 local secMove = makeSection(tMove, "Movement")
-local gravityVal = makeSlider(secMove, "Gravity", 0, 500, 196, "", function(v) Workspace.Gravity = v end)
+makeSlider(secMove, "Gravity", 0, 500, 196, "", function(v) Workspace.Gravity = v end)
 local speedVal = makeSlider(secMove, "Walk Speed", 0, 200, 16, " sp", function(v)
     local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
     if h then h.WalkSpeed = v end
 end)
-local jumpVal = makeSlider(secMove, "Jump Power", 0, 300, 50, "", function(v)
+makeSlider(secMove, "Jump Power", 0, 300, 50, "", function(v)
     local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
     if h then h.UseJumpPower = true h.JumpPower = v end
 end)
@@ -646,7 +637,7 @@ local boostOnJump = makeToggle(secMove, "Boost on Jump", "75 speed when jumping"
 -- FUN
 local secPicker = makeSection(tFun, "Select Player")
 local pickerScroll = Instance.new("ScrollingFrame")
-pickerScroll.Size = UDim2.new(1,0,0,140)
+pickerScroll.Size = UDim2.new(1,0,0,120)
 pickerScroll.BackgroundColor3 = T.BG
 pickerScroll.BorderSizePixel = 0
 pickerScroll.ScrollBarThickness = 3
@@ -667,7 +658,7 @@ local function refreshPlayerPicker()
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LP then
             local row = Instance.new("TextButton")
-            row.Size = UDim2.new(1,-4,0,26)
+            row.Size = UDim2.new(1,-4,0,24)
             row.BackgroundColor3 = (selectedTarget == p.Name) and T.Accent or T.Surface
             row.BorderSizePixel = 0
             row.Text = "  " .. p.Name
@@ -706,11 +697,48 @@ makeButton(secFun, "📍 Teleport to Selected", Color3.fromRGB(30,60,100), funct
     end
 end)
 
+local secRole = makeSection(tFun, "Role Actions")
+makeButton(secRole, "💥 Fling Murderer", Color3.fromRGB(100,20,20), function()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LP and getPlayerRole(p) == "murderer" then
+            flingPlayer(p.Name)
+            return
+        end
+    end
+    notify("Fling", "No murderer detected")
+end)
+makeButton(secRole, "💥 Fling Sheriff", Color3.fromRGB(100,70,0), function()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LP and getPlayerRole(p) == "sheriff" then
+            flingPlayer(p.Name)
+            return
+        end
+    end
+    notify("Fling", "No sheriff detected")
+end)
+makeButton(secRole, "🌀 Bayblade Murderer", Color3.fromRGB(80,20,120), function()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LP and getPlayerRole(p) == "murderer" then
+            baybladePlayer(p.Name)
+            return
+        end
+    end
+    notify("Bayblade", "No murderer detected")
+end)
+makeButton(secRole, "🌀 Bayblade Sheriff", Color3.fromRGB(100,60,0), function()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LP and getPlayerRole(p) == "sheriff" then
+            baybladePlayer(p.Name)
+            return
+        end
+    end
+    notify("Bayblade", "No sheriff detected")
+end)
+
 -- ESP UPDATE
 local espHighlights = {}
 local espBillboards = {}
 local weaponHighlights = {}
-
 local function removeESP(name)
     if espHighlights[name] then pcall(function() espHighlights[name]:Destroy() end) espHighlights[name]=nil end
     if espBillboards[name] then pcall(function() espBillboards[name].bb:Destroy() end) espBillboards[name]=nil end
@@ -718,7 +746,6 @@ end
 local function removeWeaponESP(name)
     if weaponHighlights[name] then pcall(function() weaponHighlights[name]:Destroy() end) weaponHighlights[name]=nil end
 end
-
 local function updateESP()
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LP and p.Character then
@@ -731,17 +758,12 @@ local function updateESP()
                 if espBox:get() then
                     if not espHighlights[p.Name] or not espHighlights[p.Name].Parent then
                         local hl = Instance.new("Highlight")
-                        hl.Name = "_mm2hl"
-                        hl.FillColor = color
-                        hl.FillTransparency = 0.6
-                        hl.OutlineColor = color
-                        hl.OutlineTransparency = 0
+                        hl.Name = "_mm2hl" hl.FillColor = color hl.FillTransparency = 0.6
+                        hl.OutlineColor = color hl.OutlineTransparency = 0
                         hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                        hl.Parent = p.Character
-                        espHighlights[p.Name] = hl
+                        hl.Parent = p.Character espHighlights[p.Name] = hl
                     else
-                        espHighlights[p.Name].FillColor = color
-                        espHighlights[p.Name].OutlineColor = color
+                        espHighlights[p.Name].FillColor = color espHighlights[p.Name].OutlineColor = color
                     end
                 else
                     if espHighlights[p.Name] then pcall(function() espHighlights[p.Name]:Destroy() end) espHighlights[p.Name]=nil end
@@ -751,28 +773,9 @@ local function updateESP()
                     if head then
                         if not espBillboards[p.Name] or not espBillboards[p.Name].bb.Parent then
                             local bb = Instance.new("BillboardGui")
-                            bb.Name = "_mm2bb"
-                            bb.Size = UDim2.new(0, 120, 0, 32)
-                            bb.StudsOffset = Vector3.new(0, 2, 0)
-                            bb.AlwaysOnTop = true
-                            bb.Parent = head
-                            local txt = Instance.new("TextLabel")
-                            txt.Size = UDim2.new(1, 0, 0, 16)
-                            txt.BackgroundTransparency = 1
-                            txt.Font = Enum.Font.GothamBold
-                            txt.TextSize = 11
-                            txt.TextStrokeTransparency = 0
-                            txt.TextXAlignment = Enum.TextXAlignment.Center
-                            txt.Parent = bb
-                            local rtxt = Instance.new("TextLabel")
-                            rtxt.Size = UDim2.new(1, 0, 0, 14)
-                            rtxt.Position = UDim2.new(0, 0, 0, 16)
-                            rtxt.BackgroundTransparency = 1
-                            rtxt.Font = Enum.Font.GothamMedium
-                            rtxt.TextSize = 10
-                            rtxt.TextStrokeTransparency = 0
-                            rtxt.TextXAlignment = Enum.TextXAlignment.Center
-                            rtxt.Parent = bb
+                            bb.Name = "_mm2bb" bb.Size = UDim2.new(0, 120, 0, 32) bb.StudsOffset = Vector3.new(0, 2, 0) bb.AlwaysOnTop = true bb.Parent = head
+                            local txt = Instance.new("TextLabel") txt.Size = UDim2.new(1, 0, 0, 16) txt.BackgroundTransparency = 1 txt.Font = Enum.Font.GothamBold txt.TextSize = 11 txt.TextStrokeTransparency = 0 txt.TextXAlignment = Enum.TextXAlignment.Center txt.Parent = bb
+                            local rtxt = Instance.new("TextLabel") rtxt.Size = UDim2.new(1, 0, 0, 14) rtxt.Position = UDim2.new(0, 0, 0, 16) rtxt.BackgroundTransparency = 1 rtxt.Font = Enum.Font.GothamMedium rtxt.TextSize = 10 rtxt.TextStrokeTransparency = 0 rtxt.TextXAlignment = Enum.TextXAlignment.Center rtxt.Parent = bb
                             espBillboards[p.Name] = {bb=bb, txt=txt, rtxt=rtxt}
                         end
                         local data = espBillboards[p.Name]
@@ -787,25 +790,18 @@ local function updateESP()
             else
                 removeESP(p.Name)
             end
-
-            -- Weapon ESP
             local wType = getWeaponType(p)
             local wShow = (wType=="Gun" and espGun:get()) or (wType=="Knife" and espKnife:get()) or (wType=="None" and espNone:get())
             local wColor = wType=="Gun" and T.Gun or wType=="Knife" and T.Knife or T.None
             if wShow then
                 if not weaponHighlights[p.Name] or not weaponHighlights[p.Name].Parent then
                     local hl = Instance.new("Highlight")
-                    hl.Name = "_mm2whl"
-                    hl.FillColor = wColor
-                    hl.FillTransparency = 0.6
-                    hl.OutlineColor = wColor
-                    hl.OutlineTransparency = 0
+                    hl.Name = "_mm2whl" hl.FillColor = wColor hl.FillTransparency = 0.6
+                    hl.OutlineColor = wColor hl.OutlineTransparency = 0
                     hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                    hl.Parent = p.Character
-                    weaponHighlights[p.Name] = hl
+                    hl.Parent = p.Character weaponHighlights[p.Name] = hl
                 else
-                    weaponHighlights[p.Name].FillColor = wColor
-                    weaponHighlights[p.Name].OutlineColor = wColor
+                    weaponHighlights[p.Name].FillColor = wColor weaponHighlights[p.Name].OutlineColor = wColor
                 end
             else
                 removeWeaponESP(p.Name)
@@ -836,32 +832,14 @@ local function createGunDropESP(obj)
         gunDropGui = mount(Instance.new("ScreenGui"))
         gunDropGui.Name = "MM2GunDrop" gunDropGui.ResetOnSpawn = false gunDropGui.DisplayOrder = 994
     end
-    local hl = Instance.new("Highlight")
-    hl.Parent = obj
-    hl.FillColor = gunDropColor
-    hl.FillTransparency = 0.4
-    hl.OutlineColor = gunDropColor
-    hl.OutlineTransparency = 0.2
-    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0,120,0,20)
-    frame.BackgroundTransparency = 1
-    frame.Parent = gunDropGui
-    local txt = Instance.new("TextLabel")
-    txt.Size = UDim2.new(1,0,1,0)
-    txt.BackgroundTransparency = 1
-    txt.Text = "GunDrop"
-    txt.TextColor3 = gunDropColor
-    txt.Font = Enum.Font.GothamBold
-    txt.TextSize = 12
-    txt.TextStrokeTransparency = 0
-    txt.Parent = frame
+    local hl = Instance.new("Highlight") hl.Parent = obj hl.FillColor = gunDropColor hl.FillTransparency = 0.4 hl.OutlineColor = gunDropColor hl.OutlineTransparency = 0.2 hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    local frame = Instance.new("Frame") frame.Size = UDim2.new(0,120,0,20) frame.BackgroundTransparency = 1 frame.Parent = gunDropGui
+    local txt = Instance.new("TextLabel") txt.Size = UDim2.new(1,0,1,0) txt.BackgroundTransparency = 1 txt.Text = "GunDrop" txt.TextColor3 = gunDropColor txt.Font = Enum.Font.GothamBold txt.TextSize = 12 txt.TextStrokeTransparency = 0 txt.Parent = frame
     gunDropObjects[obj] = {hl=hl, frame=frame}
 end
 local function clearGunDropESP()
     for obj, data in pairs(gunDropObjects) do
-        pcall(function() data.hl:Destroy() end)
-        pcall(function() data.frame:Destroy() end)
+        pcall(function() data.hl:Destroy() end) pcall(function() data.frame:Destroy() end)
     end
     gunDropObjects = {}
     if gunDropGui then pcall(function() gunDropGui:Destroy() end) gunDropGui=nil end
@@ -879,9 +857,7 @@ local function updateGunDropPositions()
             if onScreen then
                 data.frame.Position = UDim2.new(0, sp.X - 60, 0, sp.Y - 10)
                 data.frame.Visible = true
-            else
-                data.frame.Visible = false
-            end
+            else data.frame.Visible = false end
         end
     end
 end
@@ -890,7 +866,6 @@ Workspace.DescendantAdded:Connect(function(obj)
 end)
 
 -- AIMBOT
-local aimEnabledState = false
 local aimConn = nil
 local function startAimbot()
     if aimConn then return end
@@ -909,8 +884,7 @@ local function startAimbot()
                     if onScreen and sp.Z > 0 then
                         local d = (Vector2.new(sp.X, sp.Y) - center).Magnitude
                         if d < aimFOV.get() and d < closestDist then
-                            closestDist = d
-                            closest = hrp.Position
+                            closestDist = d closest = hrp.Position
                         end
                     end
                 end
@@ -926,19 +900,13 @@ end
 startAimbot()
 
 -- BOOST ON JUMP
-local boostActive = false
-local boostConn = nil
 local function setupBoost()
-    if boostConn then boostConn:Disconnect() end
-    boostConn = RunService.Heartbeat:Connect(function()
+    RunService.Heartbeat:Connect(function()
         if not boostOnJump:get() then return end
         local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         if h then
-            if h.FloorMaterial == Enum.Material.Air then
-                h.WalkSpeed = 75
-            else
-                h.WalkSpeed = speedVal.get()
-            end
+            if h.FloorMaterial == Enum.Material.Air then h.WalkSpeed = 75
+            else h.WalkSpeed = speedVal.get() end
         end
     end)
 end
@@ -946,15 +914,11 @@ setupBoost()
 
 -- CLEANUP
 Players.PlayerRemoving:Connect(function(p)
-    removeESP(p.Name)
-    removeWeaponESP(p.Name)
-    roleMemory[p.Name]=nil
-    refreshPlayerPicker()
+    removeESP(p.Name) removeWeaponESP(p.Name) roleMemory[p.Name]=nil refreshPlayerPicker()
 end)
 Players.PlayerAdded:Connect(function() task.wait(0.5) refreshPlayerPicker() end)
 LP.CharacterAdded:Connect(function()
-    task.wait(1)
-    clearRoleMemory()
+    task.wait(1) clearRoleMemory()
     for n in pairs(espHighlights) do removeESP(n) end
     for n in pairs(weaponHighlights) do removeWeaponESP(n) end
 end)
@@ -967,9 +931,7 @@ UserInputService.InputBegan:Connect(function(input, gpe)
         if Main.Visible then refreshPlayerPicker() end
     elseif input.KeyCode == Enum.KeyCode.Delete then
         for _, t in ipairs({espMurd,espSher,espInno,espDead,espBox,espName,espRole,espGun,espKnife,espNone,gunDropEnabled,aimEnabled,boostOnJump}) do t:set(false) end
-        FlingActive = false
-        BaybladeActive = false
-        clearGunDropESP()
+        FlingActive = false BaybladeActive = false clearGunDropESP()
         pcall(function() Workspace.FallenPartsDestroyHeight = FlingFPDH end)
         pcall(function() Lighting.Brightness = 1 end)
         notify("Panic", "All features disabled")
@@ -985,9 +947,7 @@ local fpsCount, fpsAccum = 0, 0
 local heavyTimer = 0
 local HEAVY = 0.1
 RunService.Heartbeat:Connect(function(dt)
-    fpsCount = fpsCount + 1
-    fpsAccum = fpsAccum + dt
-    heavyTimer = heavyTimer + dt
+    fpsCount = fpsCount + 1 fpsAccum = fpsAccum + dt heavyTimer = heavyTimer + dt
     pcall(updateESP)
     if gunDropEnabled:get() then pcall(updateGunDropPositions) end
     if fpsAccum >= 1 then
@@ -997,8 +957,7 @@ RunService.Heartbeat:Connect(function(dt)
     end
     if heavyTimer < HEAVY then return end
     heavyTimer = 0
-    local char = LP.Character
-    if not char then return end
+    local char = LP.Character if not char then return end
     local murderer, sheriff = nil, nil
     local alive, dead = 0, 0
     for _, p in pairs(Players:GetPlayers()) do
@@ -1027,11 +986,9 @@ end)
 refreshPlayerPicker()
 
 _G.__MM2Short_Destroy = function()
-    FlingActive = false
-    BaybladeActive = false
+    FlingActive = false BaybladeActive = false
     pcall(function() Workspace.FallenPartsDestroyHeight = FlingFPDH end)
-    pcall(function() GUI:Destroy() end)
-    pcall(function() WM:Destroy() end)
+    pcall(function() GUI:Destroy() end) pcall(function() WM:Destroy() end)
     clearGunDropESP()
     for n in pairs(espHighlights) do removeESP(n) end
     for n in pairs(weaponHighlights) do removeWeaponESP(n) end
